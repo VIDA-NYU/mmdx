@@ -1,15 +1,51 @@
 <script lang="ts">
-  import Counter from "./lib/Counter.svelte";
-  import Random from "./lib/Random.svelte";
+  import { Router, Link, Route } from "svelte-routing";
+  import BootstrapComponents from "./BootstrapComponents.svelte";
+  import Search from "./lib/Search.svelte";
+
+  export let url = "";
+
+  function getLinkProps(args: Object): Object {
+    const { href, isPartiallyCurrent, isCurrent } = args as {
+      href: string;
+      isPartiallyCurrent: boolean;
+      isCurrent: boolean;
+    };
+    const isActive = href === "/" ? isCurrent : isPartiallyCurrent || isCurrent;
+    return isActive ? { class: "nav-link active" } : { class: "nav-link" };
+  }
 </script>
 
 <main>
-  <h1>MMDex</h1>
-  <div class="card">
-    <Counter />
-    <Random />
-  </div>
-</main>
+  <Router {url}>
+    <nav class="navbar navbar-expand-lg">
+      <div class="container-fluid">
+        <Link class="navbar-brand fw-bold" to="/">MMDX</Link>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNavAltMarkup"
+          aria-controls="navbarNavAltMarkup"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span class="navbar-toggler-icon" />
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
+          <div class="navbar-nav nav-underline">
+            <Link to="/" getProps={getLinkProps}>Keyword Search</Link>
+            <Link to="/search/random" getProps={getLinkProps}>Random Search</Link>
+            <Link to="/search/image" getProps={getLinkProps}>Image Search</Link>
+            <Link to="/bootstrap" getProps={getLinkProps}>Bootstrap</Link>
+          </div>
+        </div>
+      </div>
+    </nav>
 
-<style>
-</style>
+    <div>
+      <Route path="/bootstrap" component={BootstrapComponents} />
+      <Route path="/" component={Search} />
+    </div>
+  </Router>
+</main>

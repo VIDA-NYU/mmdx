@@ -1,0 +1,145 @@
+// App custom color pallete
+$color1: #F3EDEA;
+$color2: #B1D452;
+$color3: #7C6BB2;
+$color4: #AA5678;
+$color5: #2B3563;
+
+
+// Custom.scss
+// Option A: Include all of Bootstrap
+
+// Include any default variable overrides here (though functions won't be available)
+$primary:       #7c6bb2  !default;
+$secondary:     #6d767e  !default;
+$success:       #5a9b6d  !default;
+$info:          #2b3563  !default;
+$warning:       #d88b35  !default;
+$danger:        #f44336  !default;
+$light:         #f8f9fa  !default;
+$dark:          #212529  !default;
+
+$font-family-sans-serif: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+$font-family-monospace:  SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !default;
+
+$font-weight-light:           300 !default;
+$font-weight-base:            $font-weight-light !default;
+$btn-font-weight:             $font-weight-light !default;
+
+$white:    #fff !default;
+$gray-100: #f8f9fa !default;
+$gray-200: #e9ecef !default;
+$gray-300: #dee2e6 !default;
+$gray-400: #ced4da !default;
+$gray-500: #adb5bd !default;
+$gray-600: #6c757d !default;
+$gray-700: #495057 !default;
+$gray-800: #343a40 !default;
+$gray-900: #212529 !default;
+$black:    #000 !default;
+
+// Adjust background colors
+$body-color-dark:           $gray-100 !default;
+$body-bg-dark:              #1D1B42;
+$body-bg:                   #FBFBFB;
+$body-tertiary-bg:          #F5F5F5 !default;
+$body-tertiary-bg-dark:     #262544 !default;
+$input-bg:                  #3e3d600a;
+
+// Adjust borders
+$border-radius:               .25rem !default;
+$border-radius-sm:            .125rem !default;
+$border-radius-lg:            .5rem !default;
+$border-radius-xl:            1rem !default;
+$border-radius-xxl:           2rem !default;
+$border-radius-pill:          50rem !default;
+
+$box-shadow:         0 .5rem 1rem rgba($black, .15);
+$card-box-shadow:    $box-shadow;
+$card-border-width:  0;
+$card-border-radius: $border-radius;
+$card-bg: #fff; // for dark theme, this is configured using a class override
+
+$navbar-padding-y:                  1rem !default;
+
+$pagination-border-width: 0 !important !default;
+$pagination-border-radius: var(--bs-border-radius) !important !default;
+
+$dropdown-spacing:          0.1rem !default;
+$dropdown-padding-y:        $dropdown-spacing;
+$dropdown-divider-margin-y: $dropdown-spacing;
+
+$fa-font-path: "../node_modules/font-awesome/font/";
+
+// Import original bootsrap modules
+@import "../node_modules/bootstrap/scss/bootstrap";
+
+// Then add additional custom code here
+
+.card {
+    box-shadow: var(--bs-card-box-shadow);
+}
+
+@include color-mode(light) {
+  // CSS variable overrides specific for the light mode theme
+  .navbar {
+    background-color: #E5E1F0;
+  }
+}
+
+@include color-mode(dark) {
+  // CSS variable overrides specific for the dark mode theme
+  .navbar {
+    background-color: #262544;
+  }
+  .card {
+    // @extend .card;
+    background-color: #262544;
+  }
+  .card-header-tabs .nav-link.active {
+    background-color: #262544;
+    border-bottom-color: #262544;
+  }
+  .form-control {
+    background-color: #3e3d60;
+  }
+}
+
+
+// ----------------------------------------
+
+
+// // Custom.scss
+// // Option B: Include parts of Bootstrap
+
+// // 1. Include functions first (so you can manipulate colors, SVGs, calc, etc)
+// @import "../node_modules/bootstrap/scss/functions";
+
+// // 2. Include any default variable overrides here
+
+// // 3. Include remainder of required Bootstrap stylesheets (including any separate color mode stylesheets)
+// @import "../node_modules/bootstrap/scss/variables";
+// @import "../node_modules/bootstrap/scss/variables-dark";
+
+// // 4. Include any default map overrides here
+
+// // 5. Include remainder of required parts
+// @import "../node_modules/bootstrap/scss/maps";
+// @import "../node_modules/bootstrap/scss/mixins";
+// @import "../node_modules/bootstrap/scss/root";
+
+// // 6. Optionally include any other parts as needed
+// @import "../node_modules/bootstrap/scss/utilities";
+// @import "../node_modules/bootstrap/scss/reboot";
+// @import "../node_modules/bootstrap/scss/type";
+// @import "../node_modules/bootstrap/scss/images";
+// @import "../node_modules/bootstrap/scss/containers";
+// // @import "../node_modules/bootstrap/scss/grid";
+// @import "../node_modules/bootstrap/scss/helpers";
+
+// @import "../node_modules/bootstrap/scss/buttons";
+
+// // 7. Optionally include utilities API last to generate classes based on the Sass map in `_utilities.scss`
+// @import "../node_modules/bootstrap/scss/utilities/api";
+
+// // 8. Add additional custom code here
