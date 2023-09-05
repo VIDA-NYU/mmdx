@@ -33,8 +33,6 @@
       return text;
     }
     const imgs = [
-      "image1.jpg",
-      "image2.jpg",
       "breakfast-8200753_1920.jpg",
       "dahlias-8215514_1920.jpg",
       "dog-8199216_1920.jpg",
@@ -54,7 +52,7 @@
       const [randomItem] = imgs.splice(idx, 1); // take out a random item from imgs
       hits.push({
         title: "/" + queryStr + "/" + randomStr(16) + "/" + randomItem,
-        image: "src/assets/" + randomItem,
+        image: "/test-img-dataset/" + randomItem,
       });
     }
     return { total: hits.length, hits };
