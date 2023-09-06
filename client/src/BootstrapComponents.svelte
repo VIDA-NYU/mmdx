@@ -1,19 +1,19 @@
 <script lang="ts">
-  import "../node_modules/bootstrap/dist/js/bootstrap.bundle.min.js";
+  import { Popover, Tooltip } from "bootstrap/dist/js/bootstrap.bundle.min.js";
 
-  const onload = (el) => {
+  const onload = (el: HTMLElement) => {
     const popoverTriggerList = document.querySelectorAll(
       '[data-bs-toggle="popover"]'
     );
     const popoverList = [...popoverTriggerList].map(
-      (popoverTriggerEl) => new bootstrap.Popover(popoverTriggerEl)
+      (popoverTriggerEl) => new Popover(popoverTriggerEl)
     );
 
     const tooltipTriggerList = document.querySelectorAll(
       '[data-bs-toggle="tooltip"]'
     );
     const tooltipList = [...tooltipTriggerList].map(
-      (tooltipTriggerEl) => new bootstrap.Tooltip(tooltipTriggerEl)
+      (tooltipTriggerEl) => new Tooltip(tooltipTriggerEl)
     );
   };
 </script>
@@ -685,7 +685,7 @@
               <div class="card">
                 <img
                   class="card-img-top"
-                  src="/src/assets/image1.jpg"
+                  src="image1.jpg"
                   alt="Card image cap"
                 />
                 <div class="card-body">
@@ -757,7 +757,7 @@
               <div class="card">
                 <img
                   class="card-img-top"
-                  src="/src/assets/image2.jpg"
+                  src="image2.jpg"
                   alt="Card image cap"
                 />
                 <ul class="list-group list-group-flush">
@@ -819,14 +819,14 @@
             <div class="carousel-inner">
               <div class="carousel-item active">
                 <img
-                  src="/src/assets/image1.jpg"
+                  src="image1.jpg"
                   class="d-block img-fluid mx-auto w-50"
                   alt="..."
                 />
               </div>
               <div class="carousel-item">
                 <img
-                  src="/src/assets/image2.jpg"
+                  src="image2.jpg"
                   class="d-block img-fluid mx-auto w-50"
                   alt="..."
                 />

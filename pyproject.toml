@@ -7,15 +7,17 @@ authors = ["Aécio Santos <aecio.solando@gmail.com>"]
 [tool.poetry.dependencies]
 python = "^3.9"
 Flask = "^2.3.3"
-flask-vite = "^0.3.0"
 transformers = "^4.32.1"
 lancedb = "^0.2.2"
 numpy = "^1.25.2"
 duckdb = "^0.8.1"
 Pillow = "^10.0.0"
-pandas = "^2.1.0"
+pandas = "^2.0.3, !=2.1.0"
+torch = ">=2.0.0, !=2.0.1"
+pyarrow = "^13.0.0"
 
 [tool.poetry.dev-dependencies]
+pytest  = { version = "^6.2.4" }
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

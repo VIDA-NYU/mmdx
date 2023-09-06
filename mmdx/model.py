@@ -1,3 +1,4 @@
+import abc
 import numpy as np
 from PIL import Image
 from transformers import CLIPModel, CLIPProcessor, CLIPTokenizerFast
@@ -7,11 +8,32 @@ from transformers import CLIPModel, CLIPProcessor, CLIPTokenizerFast
 DEFAULT_MODEL_ID = "openai/clip-vit-base-patch32"
 
 
-class ClipModel:
+class BaseEmbeddingModel(abc.ABC):
+    @abc.abstractmethod
+    def dimensions(self) -> int:
+        pass
+
+    @abc.abstractmethod
+    def embed_text(self, query: str) -> np.ndarray:
+        pass
+
+    @abc.abstractmethod
+    def embed_image(self, image: Image) -> np.ndarray:
+        pass
+
+    @abc.abstractmethod
+    def embed_image_path(self, image_path: str) -> np.ndarray:
+        pass
+
+
+class ClipModel(BaseEmbeddingModel):
     def __init__(self, model_id=DEFAULT_MODEL_ID) -> None:
         self.tokenizer: CLIPTokenizerFast = CLIPTokenizerFast.from_pretrained(model_id)
         self.model: CLIPModel = CLIPModel.from_pretrained(model_id)
         self.processor: CLIPProcessor = CLIPProcessor.from_pretrained(model_id)
+
+    def dimensions(self) -> int:
+        return 512
 
     def embed_text(self, query: str) -> np.ndarray:
         inputs = self.tokenizer([query], padding=True, return_tensors="pt")
@@ -25,3 +47,21 @@ class ClipModel:
 
     def embed_image_path(self, image_path: str) -> np.ndarray:
         return self.embed_image(Image.open(image_path))
+
+
+class RandomMockModel(BaseEmbeddingModel):
+    def __init__(self) -> None:
+        super().__init__()
+        self.dim = 16
+
+    def dimensions(self) -> int:
+        return self.dim
+
+    def embed_text(self, query: str) -> np.ndarray:
+        return np.random.uniform(size=self.dim)
+
+    def embed_image(self, image: Image) -> np.ndarray:
+        return np.random.uniform(size=self.dim)
+
+    def embed_image_path(self, image_path: str) -> np.ndarray:
+        return np.random.uniform(size=self.dim)
