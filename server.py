@@ -67,3 +67,4 @@ def create_db_for_data_path():
 if __name__ == "__main__":
     db = create_db_for_data_path()
     app.run(debug=True)
+    app.run(debug=True, host="0.0.0.0") #FIXME: use 0.0.0.0 only in production
