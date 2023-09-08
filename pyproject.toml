@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "modx"
+name = "mmdx"
 version = "0.1.0"
 description = ""
 authors = ["Aécio Santos <aecio.solando@gmail.com>"]
