@@ -1,4 +1,6 @@
+#------------------------------------
 FROM python:3.9-slim-bookworm as base
+#------------------------------------
 
 RUN apt-get update \
     && apt-get upgrade \
@@ -20,7 +22,9 @@ RUN npm install
 COPY client /app/client
 RUN npm run build
 
+#-------------------
 FROM base as builder
+#-------------------
 
 ENV PIP_DEFAULT_TIMEOUT=100 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
@@ -43,8 +47,9 @@ ENV VIRTUAL_ENV=/app/.venv
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 RUN pip install dist/mmdx-*.whl
 
-
+#-----------------
 FROM base as final
+#-----------------
 
 COPY --from=builder /app/.venv ./.venv
 COPY --from=client-builder /app/client/dist/ /app/client/dist/
@@ -61,6 +66,8 @@ from mmdx.model import ClipModel
 model = ClipModel()
 HEREDOC
 EOF
+
+ENV ENV=prod
 
 # Run the application:
 # FIXME: use UWSGI server
