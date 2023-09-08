@@ -60,7 +60,7 @@ def create_db_for_data_path():
     print(f" - DB path: {db_path}")
     print(f" - Raw data path: {data_path}.")
     return VectorDB.from_data_path(
-        data_path, db_path, model, delete_existing=DB_DELETE_EXISTING
+        data_path, db_path, model, delete_existing=DB_DELETE_EXISTING, batch_load=True
     )
 
 
