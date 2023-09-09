@@ -28,8 +28,6 @@ def assets(path):
 
 @app.route("/images/<path:path>")
 def images(path):
-    print("\n\nImages:")
-    print(os.path.join(DATA_PATH, path))
     return send_from_directory(DATA_PATH, path)
 
 
@@ -51,15 +49,16 @@ def create_db_for_data_path():
     data_path = DATA_PATH
     db_path = DB_PATH
 
-    print("Loading model...")
+    print("Loading embedding model...")
     model = ClipModel()
 
     print(f"Creating vector database:")
-    print(f" - DB path: {db_path}")
-    print(f" - Raw data path: {data_path}.")
+    print(f" - DB path: {os.path.abspath(db_path)}")
+    print(f" - Raw data path: {os.path.abspath(data_path)}")
     vectordb = VectorDB.from_data_path(
         data_path, db_path, model, delete_existing=DB_DELETE_EXISTING, batch_load=True
     )
+    print("Finished DB initialization.")
     return vectordb
 
 

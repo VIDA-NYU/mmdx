@@ -5,11 +5,7 @@ from PIL import Image
 import pyarrow as pa
 from .model import BaseEmbeddingModel
 import duckdb
-import pyarrow as pa
 from typing import Iterator
-from lance.vector import vec_to_table
-import numpy as np
-import pyarrow
 
 
 DB_BATCH_SIZE = 32
@@ -111,7 +107,7 @@ class VectorDB:
 
         table_name = DEFAULT_TABLE_NAME
         if delete_existing and table_name in db.table_names():
-            print(f"Droping existing database {table_name}...")
+            print(f"Dropping existing database {table_name}...")
             db.drop_table(table_name)
             print("done.")
 
@@ -140,7 +136,7 @@ class VectorDB:
 
     def search_by_image_path(self, image_path: str, limit: int) -> pd.DataFrame:
         df_hits = (
-            self.tbl.search(self.model.embed_image(image_path=image_path))
+            self.tbl.search(self.model.embed_image_path(image_path))
             .limit(limit)
             .to_df()
         )
