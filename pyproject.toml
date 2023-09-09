@@ -15,6 +15,7 @@ Pillow = "^10.0.0"
 pandas = "^2.0.3, !=2.1.0"
 torch = ">=2.0.0, !=2.0.1"
 pyarrow = "^13.0.0"
+gunicorn = "^21.2.0"
 
 [tool.poetry.dev-dependencies]
 pytest  = { version = "^6.2.4" }

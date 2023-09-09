@@ -11,8 +11,6 @@ DB_PATH = "data/db/"
 DB_DELETE_EXISTING = False
 
 app = Flask(__name__)
-db: VectorDB = None
-
 
 # Path for our main Svelte app. All routes in the app must be added
 # here to allow refreshing to work correctly.
@@ -59,13 +57,15 @@ def create_db_for_data_path():
     print(f"Creating vector database:")
     print(f" - DB path: {db_path}")
     print(f" - Raw data path: {data_path}.")
-    return VectorDB.from_data_path(
+    vectordb = VectorDB.from_data_path(
         data_path, db_path, model, delete_existing=DB_DELETE_EXISTING, batch_load=True
     )
+    return vectordb
 
+
+db: VectorDB = create_db_for_data_path()
 
 if __name__ == "__main__":
-    db = create_db_for_data_path()
     if os.environ.get("ENV") == "prod":
         app.run(debug=False, host="0.0.0.0")
     else:

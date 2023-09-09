@@ -6,13 +6,11 @@ RUN apt-get update \
     && apt-get upgrade \
     && rm -rf /var/lib/apt/lists/*
 
-ENV PYTHONFAULTHANDLER=1 \
-    PYTHONHASHSEED=random \
-    PYTHONUNBUFFERED=1
+WORKDIR /app/
 
-WORKDIR /app
-
+#-------------------------------------------
 FROM node:18-bookworm-slim as client-builder
+#-------------------------------------------
 
 COPY client/package.json client/package-lock.json /app/client/
 WORKDIR /app/client
@@ -33,27 +31,33 @@ ENV PIP_DEFAULT_TIMEOUT=100 \
 
 RUN pip install "poetry==$POETRY_VERSION"
 
-COPY pyproject.toml poetry.lock ./
+COPY pyproject.toml poetry.lock /app/
 
 RUN poetry config installer.max-workers 10 && \
     poetry config virtualenvs.in-project true
 RUN poetry install --only=main --no-root
 
-COPY mmdx ./mmdx
+COPY mmdx /app/mmdx/
 RUN poetry build
-
-# FIXME move this to base stage, along with the activation from final stage
-ENV VIRTUAL_ENV=/app/.venv
-ENV PATH="$VIRTUAL_ENV/bin:$PATH"
-RUN pip install dist/mmdx-*.whl
+RUN poetry run pip install dist/mmdx-*.whl
 
 #-----------------
 FROM base as final
 #-----------------
 
-COPY --from=builder /app/.venv ./.venv
-COPY --from=client-builder /app/client/dist/ /app/client/dist/
-COPY client/public/ /app/client/public/
+ENV PYTHONFAULTHANDLER=1 \
+    PYTHONHASHSEED=random \
+    PYTHONUNBUFFERED=1
+
+# Create non-root user and setup app directory
+RUN useradd --create-home mmdx
+RUN chown -R mmdx /app
+USER mmdx
+
+# Copy application files to the final image
+COPY --chown=mmdx --from=builder /app/.venv /app/.venv
+COPY --chown=mmdx --from=client-builder /app/client/dist/ /app/client/dist/
+COPY --chown=mmdx client/public/ /app/client/public/
 
 # Activate venv
 ENV VIRTUAL_ENV=/app/.venv
@@ -67,9 +71,10 @@ model = ClipModel()
 HEREDOC
 EOF
 
+# Setup env variables
 ENV ENV=prod
+ENV GUNICORN_CMD_ARGS="--workers=1 --threads=4 --worker-class=gthread --log-file=- --chdir /app/ --worker-tmp-dir /dev/shm --bind 0.0.0.0:5000"
 
 # Run the application:
-# FIXME: use UWSGI server
 COPY server.py .
-CMD ["python", "server.py"]
+CMD ["gunicorn", "server:app"]
