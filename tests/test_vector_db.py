@@ -32,6 +32,38 @@ def test_create_vector_from_path_and_search():
     assert len(hits.iloc[0]["vector"]) == model.dimensions()
 
 
+def test_random_search():
+    db_path = "data/test/db_path_search/"
+    model = RandomMockModel()
+    db = VectorDB.from_data_path(data_path, db_path, model)
+    assert db != None
+
+    hits = db.random_search(limit=3)
+    assert len(hits.index) == 3
+
+    hits = db.random_search(limit=6)
+    assert len(hits.index) == 6
+
+
+def test_image_search():
+    db_path = "data/test/db_path_image_search/"
+    model = RandomMockModel()
+    db = VectorDB.from_data_path(data_path, db_path, model)
+    assert db != None
+
+    # first, retrieve a random image to use as query
+    hits = db.random_search(limit=1)
+    assert len(hits.index) == 1
+
+    # run actual image search using the random image as query
+    random_query_path = hits.iloc[0]["image_path"]
+    hits = db.search_by_image_path(random_query_path, limit=5)
+    # make sure we get exactly 5 results
+    assert len(hits.index) == 5
+    # make sure the query image is not in the results
+    assert hits["image_path"].eq(random_query_path).any() == False
+
+
 def test_make_batches():
     image_files = list(find_files_in_path(data_path))
     model = RandomMockModel()

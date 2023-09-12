@@ -1,6 +1,4 @@
 import os
-import random
-import json
 from flask import Flask, send_from_directory, request
 from mmdx.search import VectorDB
 from mmdx.model import ClipModel
@@ -11,6 +9,7 @@ DB_PATH = "data/db/"
 DB_DELETE_EXISTING = False
 
 app = Flask(__name__)
+
 
 # Path for our main Svelte app. All routes in the app must be added
 # here to allow refreshing to work correctly.
@@ -31,16 +30,28 @@ def images(path):
     return send_from_directory(DATA_PATH, path)
 
 
-@app.route("/api/rand")
-def rand():
-    return json.dumps({"number": random.randint(0, 100)})
+@app.route("/api/v1/random")
+def random_search():
+    limit: int = request.args.get("limit", 12, type=int)
+    hits = db.random_search(limit=limit)
+    hits.drop(columns=["vector"], inplace=True)
+    return {"total": len(hits.index), "hits": hits.to_dict("records")}
 
 
-@app.route("/api/v1/search")
-def search():
+@app.route("/api/v1/keyword_search")
+def keyword_search():
+    query: str = request.args.get("q")
+    limit: int = request.args.get("limit", 12, type=int)
+    hits = db.search_by_text(query_string=query, limit=limit)
+    hits.drop(columns=["vector"], inplace=True)
+    return {"total": len(hits.index), "hits": hits.to_dict("records")}
+
+
+@app.route("/api/v1/image_search")
+def image_search():
     query: str = request.args.get("q")
     limit: str = request.args.get("limit", 12, type=int)
-    hits = db.search_by_text(query_string=query, limit=limit)
+    hits = db.search_by_image_path(image_path=query, limit=limit)
     hits.drop(columns=["vector"], inplace=True)
     return {"total": len(hits.index), "hits": hits.to_dict("records")}
 

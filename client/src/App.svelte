@@ -2,6 +2,8 @@
   import { Router, Link, Route } from "svelte-routing";
   import BootstrapComponents from "./BootstrapComponents.svelte";
   import Search from "./lib/Search.svelte";
+  import Random from "./lib/Random.svelte";
+    import ImageSearch from "./lib/ImageSearch.svelte";
 
   export let url = "";
 
@@ -18,7 +20,7 @@
 
 <main>
   <Router {url}>
-    <nav class="navbar navbar-expand-lg">
+    <nav class="navbar navbar-expand-lg sticky-top">
       <div class="container-fluid">
         <Link class="navbar-brand fw-bold" to="/">MMDX</Link>
         <button
@@ -37,15 +39,17 @@
             <Link to="/" getProps={getLinkProps}>Keyword Search</Link>
             <Link to="/search/random" getProps={getLinkProps}>Random Search</Link>
             <Link to="/search/image" getProps={getLinkProps}>Image Search</Link>
-            <Link to="/bootstrap" getProps={getLinkProps}>Bootstrap</Link>
+            <!-- <Link to="/bootstrap" getProps={getLinkProps}>Bootstrap</Link> -->
           </div>
         </div>
       </div>
     </nav>
 
     <div>
-      <Route path="/bootstrap" component={BootstrapComponents} />
       <Route path="/" component={Search} />
+      <Route path="/search/random" component={Random} />
+      <Route path="/search/image" component={ImageSearch} location={window.location} />
+      <!-- <Route path="/bootstrap" component={BootstrapComponents} /> -->
     </div>
   </Router>
 </main>

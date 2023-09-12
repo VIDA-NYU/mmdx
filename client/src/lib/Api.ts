@@ -12,22 +12,17 @@ export interface Hit {
     score: number;
 }
 
-export async function search(queryStr: string, limit: number, start: number): Promise<Hits> {
+interface ApiHit {
+    _distance: number;
+    image_path: string;
+}
 
-    const response = await fetchJSON("/search", {
-        "q": queryStr,
-        limit: limit.toString(),
-        start: start.toString(),
-    }).catch((e) => {
-        throw new Error("Failed to retrieve search results.", { cause: e })
-    }) as {
-        total: number;
-        hits: {
-            _distance: number;
-            image_path: string;
-        }[];
-    };
+interface ApiHits {
+    total: number;
+    hits: ApiHit[]
+}
 
+function toHits(response: ApiHits): Hits {
     let hits: Hit[] = [];
     for (let i = 0; i < response.hits.length; i++) {
         const h = response.hits[i];
@@ -38,6 +33,39 @@ export async function search(queryStr: string, limit: number, start: number): Pr
         });
     }
     return { total: hits.length, hits };
+}
+
+export async function search(queryStr: string, limit: number): Promise<Hits> {
+
+    const response = await fetchJSON("/keyword_search", {
+        "q": queryStr,
+        limit: limit.toString(),
+    }).catch((e) => {
+        throw new Error("Failed to retrieve search results.", { cause: e })
+    }) as ApiHits;
+
+    return toHits(response);
+}
+
+export async function similar(imagePath: string, limit: number): Promise<Hits> {
+    const response = await fetchJSON("/image_search", {
+        "q": imagePath,
+        limit: limit.toString(),
+    }).catch((e) => {
+        throw new Error("Failed to search for similar images.", { cause: e })
+    }) as ApiHits;
+    return toHits(response);
+}
+
+export async function random(limit: number): Promise<Hits> {
+
+    const response = await fetchJSON("/random", {
+        limit: limit.toString(),
+    }).catch((e) => {
+        throw new Error("Failed to retrieve random results.", { cause: e })
+    }) as ApiHits;
+
+    return toHits(response);
 }
 
 interface FetchInit {

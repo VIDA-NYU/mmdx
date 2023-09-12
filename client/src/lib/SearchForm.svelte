@@ -1,4 +1,8 @@
 <script>
+	//
+	// This component is based on code from svelte-search's component (MIT license).
+	// URL: https://github.com/metonym/svelte-search/blob/master/src/Search.svelte
+	//
 	/**
 	 * Specify the input value
 	 */
@@ -84,18 +88,9 @@
 	aria-labelledby={removeFormAriaAttributes ? null : id}
 	on:submit|preventDefault
 >
-	<div class="input-group">
+	<div class="input-group input-group-lg">
 		<span class="input-group-text">
-			<svg
-				style="fill: #cbd5e1; height: 1.25rem; width: 1.25rem;"
-				viewBox="0 0 20 20"
-			>
-				<path
-					fill-rule="evenodd"
-					d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-					clip-rule="evenodd"
-				/>
-			</svg>
+			<i class="fa fa-search" aria-hidden="true"></i>
 		</span>
 		<label
 			id="{id}-label"

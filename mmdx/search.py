@@ -128,6 +128,12 @@ class VectorDB:
         df_count = duckdb.sql("SELECT COUNT(*) FROM lance_tbl").to_df()
         return df_count.iloc[0]["count_star()"]
 
+    def random_search(self, limit: int) -> pd.DataFrame:
+        lance_tbl = self.tbl.to_lance()
+        return duckdb.sql(
+            f"SELECT * FROM lance_tbl USING SAMPLE {limit};"
+        ).to_df()
+
     def search_by_image(self, image: Image, limit: int) -> pd.DataFrame:
         df_hits = (
             self.tbl.search(self.model.embed_image(image=image)).limit(limit).to_df()
@@ -135,11 +141,13 @@ class VectorDB:
         return df_hits
 
     def search_by_image_path(self, image_path: str, limit: int) -> pd.DataFrame:
+        full_image_path = os.path.join(self.data_path, image_path)
         df_hits = (
-            self.tbl.search(self.model.embed_image_path(image_path))
-            .limit(limit)
+            self.tbl.search(self.model.embed_image_path(full_image_path))
+            .limit(limit + 1)
             .to_df()
         )
+        df_hits = df_hits[df_hits["image_path"] != image_path][0:limit]
         return df_hits
 
     def search_by_text(self, query_string: str, limit: int) -> pd.DataFrame:
