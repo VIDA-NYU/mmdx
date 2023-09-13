@@ -31,10 +31,12 @@
     />
 
     {#await result}
-      <p>
-        <i class="fa fa-spinner fa-spin" aria-hidden="true" />
-        Loading...
-      </p>
+      <div class="mt-2 mb-3">
+        <span>
+          <i class="fa fa-spinner fa-spin" aria-hidden="true" />
+          Loading...
+        </span>
+      </div>
     {:then result}
       {#if result}
         <div class="mt-2 mb-3">

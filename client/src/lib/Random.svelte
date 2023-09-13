@@ -2,7 +2,7 @@
   import { onMount } from "svelte";
   import type { Hits, Hit } from "./Api";
   import { random } from "./Api";
-    import ImageCard from "./ImageCard.svelte";
+  import ImageCard from "./ImageCard.svelte";
 
   const limit = 4 * 2;
   let queryStr = "";
@@ -24,10 +24,12 @@
       Reload samples
     </button>
     {#await result}
-      <p>
-        <i class="fa fa-spinner fa-spin" aria-hidden="true" />
-        Loading...
-      </p>
+      <div class="mt-2 mb-3">
+        <span>
+          <i class="fa fa-spinner fa-spin" aria-hidden="true" />
+          Loading...
+        </span>
+      </div>
     {:then result}
       {#if result}
         <div class="mt-2 mb-3">
@@ -38,7 +40,7 @@
         <div class="d-flex flex-wrap">
           {#each result.hits as hit, idx}
             <div class="w-25">
-              <ImageCard hit={hit} />
+              <ImageCard {hit} />
               <!-- <div class="card me-3 mb-3">
                 <img
                   src={"/images/" + image}

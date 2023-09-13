@@ -49,7 +49,7 @@
       <Route path="/" component={Search} />
       <Route path="/search/random" component={Random} />
       <Route path="/search/image" component={ImageSearch} location={window.location} />
-      <!-- <Route path="/bootstrap" component={BootstrapComponents} /> -->
+      <Route path="/bootstrap" component={BootstrapComponents} />
     </div>
   </Router>
 </main>
