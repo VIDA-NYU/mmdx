@@ -1,14 +1,13 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import type { Hits, Hit } from "./Api";
+  import type { Hits } from "./Api";
   import { random } from "./Api";
   import ImageCard from "./ImageCard.svelte";
 
-  const limit = 4 * 2;
-  let queryStr = "";
   let result: Promise<Hits> | null = null;
 
   function onQuerySubmit() {
+    const limit = 4 * 2;
     result = random(limit);
   }
 
@@ -21,7 +20,7 @@
   <div class="py-5">
     <button class="btn btn-primary" on:click={onQuerySubmit}>
       <i class="fa fa-random" aria-hidden="true" />
-      Reload samples
+      Load new samples
     </button>
     {#await result}
       <div class="mt-2 mb-3">
@@ -41,23 +40,6 @@
           {#each result.hits as hit, idx}
             <div class="w-25">
               <ImageCard {hit} />
-              <!-- <div class="card me-3 mb-3">
-                <img
-                  src={"/images/" + image}
-                  style="max-height: 350px;"
-                  class="card-img-top"
-                  alt="Search result #{idx + 1}"
-                />
-
-                <div class="card-body">
-                  <p class="card-text">
-                    #{idx + 1}
-                    {title}
-                  </p>
-                  <btn class="btn btn-sm btn-success">Relevant</btn>
-                  <btn class="btn btn-sm btn-secondary">Irrelevant</btn>
-                </div>
-              </div> -->
             </div>
           {/each}
         </div>

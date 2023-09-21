@@ -1,4 +1,3 @@
-
 const API_URL = "/api/v1"
 
 export interface Hits {
@@ -7,65 +6,77 @@ export interface Hits {
 }
 
 export interface Hit {
-    image: string;
-    title: string;
-    score: number;
-}
-
-interface ApiHit {
     _distance: number;
     image_path: string;
+    labels?: string[];
 }
 
-interface ApiHits {
-    total: number;
-    hits: ApiHit[]
-}
-
-function toHits(response: ApiHits): Hits {
-    let hits: Hit[] = [];
-    for (let i = 0; i < response.hits.length; i++) {
-        const h = response.hits[i];
-        hits.push({
-            title: h.image_path,
-            image: h.image_path,
-            score: h._distance,
-        });
-    }
-    return { total: hits.length, hits };
-}
-
-export async function search(queryStr: string, limit: number): Promise<Hits> {
-
-    const response = await fetchJSON("/keyword_search", {
+export async function keywordSearch(queryStr: string, limit: number): Promise<Hits> {
+    const response = await fetchJSON<Hits>("/keyword_search", {
         "q": queryStr,
         limit: limit.toString(),
     }).catch((e) => {
-        throw new Error("Failed to retrieve search results.", { cause: e })
-    }) as ApiHits;
-
-    return toHits(response);
+        throw new Error("Failed to retrieve keyword search results.", { cause: e })
+    });
+    return response;
 }
 
-export async function similar(imagePath: string, limit: number): Promise<Hits> {
-    const response = await fetchJSON("/image_search", {
+export async function similarSearch(imagePath: string, limit: number): Promise<Hits> {
+    const response = await fetchJSON<Hits>("/image_search", {
         "q": imagePath,
         limit: limit.toString(),
     }).catch((e) => {
         throw new Error("Failed to search for similar images.", { cause: e })
-    }) as ApiHits;
-    return toHits(response);
+    });
+    return response;
 }
 
 export async function random(limit: number): Promise<Hits> {
-
-    const response = await fetchJSON("/random", {
+    const response = await fetchJSON<Hits>("/random", {
         limit: limit.toString(),
     }).catch((e) => {
-        throw new Error("Failed to retrieve random results.", { cause: e })
-    }) as ApiHits;
+        throw new Error("Failed to retrieve random search results.", { cause: e })
+    });
+    return response;
+}
 
-    return toHits(response);
+interface LabelsResponse {
+    labels: string[];
+}
+
+export async function loadLabels(): Promise<LabelsResponse> {
+    const response = await fetchJSON<LabelsResponse>("/labels").catch((e) => {
+        throw new Error("Failed to load labels.", { cause: e })
+    });
+    return response;
+}
+
+interface AddLabelResponse {
+    success: boolean;
+}
+
+export async function addLabel(image_path: string, label: string): Promise<AddLabelResponse> {
+    const response = await fetchJSON<AddLabelResponse>("/add_label", {
+        image_path,
+        label
+    }).catch((e) => {
+        throw new Error("Failed to save label.", { cause: e })
+    });
+    return response;
+}
+
+interface RemoveLabelResponse {
+    success: boolean;
+}
+
+export async function removeLabel(image_path: string, label: string): Promise<AddLabelResponse> {
+    const response = await fetchJSON<RemoveLabelResponse>("/remove_label", {
+        image_path,
+        label
+    }).catch((e) => {
+        throw new Error("Failed to remove label.", { cause: e })
+    });
+    return response;
 }
 
 interface FetchInit {
@@ -75,12 +86,12 @@ interface FetchInit {
     credentials: 'include';
 }
 
-export function fetchJSON(
+export function fetchJSON<T>(
     url: string,
     args?: { [key: string]: any } | null,
     post?: object | null,
     external?: boolean,
-) {
+): Promise<T> {
     let argstring = '';
     if (args) {
         Object.keys(args).forEach((k, ix) => {

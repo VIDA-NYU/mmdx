@@ -1,11 +1,23 @@
 <script lang="ts">
   import { Router, Link, Route } from "svelte-routing";
+  import { onMount } from "svelte";
+  import { labelStore } from "./lib/stores";
+  import * as api from "./lib/Api";
   import BootstrapComponents from "./BootstrapComponents.svelte";
   import Search from "./lib/Search.svelte";
   import Random from "./lib/Random.svelte";
-    import ImageSearch from "./lib/ImageSearch.svelte";
+  import ImageSearch from "./lib/ImageSearch.svelte";
 
   export let url = "";
+
+  onMount(async () => {
+    console.log("Loading labels...");
+    const remoteLabels = await api.loadLabels();
+    labelStore.update((labels: string[]) => [
+      ...new Set([...labels, ...remoteLabels.labels]),
+    ]);
+    console.log("Labels loaded: ", remoteLabels);
+  });
 
   function getLinkProps(args: Object): Object {
     const { href, isPartiallyCurrent, isCurrent } = args as {
@@ -37,7 +49,9 @@
         <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
           <div class="navbar-nav nav-underline">
             <Link to="/" getProps={getLinkProps}>Keyword Search</Link>
-            <Link to="/search/random" getProps={getLinkProps}>Random Search</Link>
+            <Link to="/search/random" getProps={getLinkProps}
+              >Random Search</Link
+            >
             <Link to="/search/image" getProps={getLinkProps}>Image Search</Link>
             <!-- <Link to="/bootstrap" getProps={getLinkProps}>Bootstrap</Link> -->
           </div>
@@ -48,7 +62,11 @@
     <div>
       <Route path="/" component={Search} />
       <Route path="/search/random" component={Random} />
-      <Route path="/search/image" component={ImageSearch} location={window.location} />
+      <Route
+        path="/search/image"
+        component={ImageSearch}
+        location={window.location}
+      />
       <Route path="/bootstrap" component={BootstrapComponents} />
     </div>
   </Router>

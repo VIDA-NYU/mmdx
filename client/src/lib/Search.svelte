@@ -1,7 +1,7 @@
 <script lang="ts">
   import SearchForm from "./SearchForm.svelte";
   import type { Hits } from "./Api";
-  import { search } from "./Api";
+  import { keywordSearch } from "./Api";
   import ImageCard from "./ImageCard.svelte";
 
   const limit = 4 * 3;
@@ -9,7 +9,7 @@
   let result: Promise<Hits> | null = null;
 
   function onQuerySubmit() {
-    result = search(queryStr, limit);
+    result = keywordSearch(queryStr, limit);
   }
 
   function clearSearch() {

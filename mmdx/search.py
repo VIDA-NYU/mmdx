@@ -1,7 +1,6 @@
 import os
 import lancedb
 import pandas as pd
-from PIL import Image
 import pyarrow as pa
 from .model import BaseEmbeddingModel
 import duckdb
@@ -22,32 +21,34 @@ def find_files_in_path(path, file_extensions=(".png", ".jpg", "jpeg")) -> Iterat
                 yield file_path
 
 
-def make_batches(
-    data_path: str,
-    all_files: list[str],
-    model: BaseEmbeddingModel,
-    batch_size=DB_BATCH_SIZE,
-) -> pa.RecordBatch:
-    for i in range(0, len(all_files), batch_size):
-        image_paths = all_files[i : i + batch_size]
-        embeddings = [
-            model.embed_image_path(os.path.join(data_path, path))
-            for path in image_paths
-        ]
-        image_paths_array = pa.array(image_paths)
-        embeddings_array = pa.array(
-            embeddings, pa.list_(pa.float32(), model.dimensions())
-        )
-        yield pa.RecordBatch.from_arrays(
-            [image_paths_array, embeddings_array],
-            ["image_path", "vector"],
-        )
-
-
 def load_batches(
     db: lancedb.DBConnection, table_name: str, data_path: str, model: BaseEmbeddingModel
 ) -> lancedb.table.Table:
     image_files = list(find_files_in_path(data_path))
+    batch_size = DB_BATCH_SIZE
+
+    def make_batches() -> pa.RecordBatch:
+        for i in range(0, len(image_files), batch_size):
+            image_paths = image_files[i : i + batch_size]
+            embeddings = [
+                model.embed_image_path(os.path.join(data_path, path))
+                for path in image_paths
+            ]
+            image_paths_array = pa.array(image_paths)
+            embeddings_array = pa.array(
+                embeddings, pa.list_(pa.float32(), model.dimensions())
+            )
+            yield pa.RecordBatch.from_arrays(
+                [
+                    image_paths_array,
+                    embeddings_array,
+                ],
+                [
+                    "image_path",
+                    "vector",
+                ],
+            )
+
     db_schema = pa.schema(
         [
             pa.field("image_path", pa.utf8()),
@@ -56,7 +57,7 @@ def load_batches(
     )
     tbl = db.create_table(
         table_name,
-        make_batches(data_path, image_files, model),
+        make_batches(),
         schema=db_schema,
     )
     # tbl.add(make_batches(data_path, image_files, model))
@@ -95,6 +96,13 @@ class VectorDB:
         self.tbl = table
         self.data_path = data_path
 
+        self.df_labels = pd.DataFrame(
+            {
+                "image_path": pd.Series(dtype="str"),
+                "label": pd.Series(dtype="str"),
+            }
+        )
+
     @staticmethod
     def from_data_path(
         data_path: str,
@@ -123,21 +131,53 @@ class VectorDB:
                 tbl = db.create_table(table_name, data=make_df(data_path, model))
             return VectorDB(db, tbl, model, data_path)
 
-    def count_rows(self) -> pd.DataFrame:
+    def count_rows(self) -> int:
+        return len(self.tbl)
+
+    def get(self, image_path: str) -> pd.DataFrame:
         lance_tbl = self.tbl.to_lance()
-        df_count = duckdb.sql("SELECT COUNT(*) FROM lance_tbl").to_df()
-        return df_count.iloc[0]["count_star()"]
+        return duckdb.sql(
+            f"SELECT * FROM lance_tbl WHERE image_path='{image_path}';"
+        ).to_df()
+
+    def add_label(self, image_path: str, label: str):
+        df_new_data = pd.DataFrame([{"image_path": image_path, "label": label}])
+        self.df_labels = pd.concat([self.df_labels, df_new_data], ignore_index=True)
+
+    def remove_label(self, image_path: str, label: str):
+        df_new_data = pd.DataFrame([{"image_path": image_path, "label": label}])
+        self.df_labels = pd.concat([self.df_labels, df_new_data], ignore_index=True)
+        mask = (self.df_labels["image_path"] == image_path) & (
+            self.df_labels["label"] == label
+        )
+        self.df_labels.drop(mask.index, inplace=True)
+
+    def get_labels(self, image_path: str = None) -> list[str]:
+        if image_path is None:
+            return list(self.df_labels["label"].unique())
+        else:
+            df_labels = self.df_labels[self.df_labels["image_path"] == image_path]
+            return df_labels["label"].to_list()
 
     def random_search(self, limit: int) -> pd.DataFrame:
         lance_tbl = self.tbl.to_lance()
-        return duckdb.sql(
-            f"SELECT * FROM lance_tbl USING SAMPLE {limit};"
-        ).to_df()
-
-    def search_by_image(self, image: Image, limit: int) -> pd.DataFrame:
-        df_hits = (
-            self.tbl.search(self.model.embed_image(image=image)).limit(limit).to_df()
+        labels_tbl = (
+            self.df_labels.groupby(by="image_path")["label"]
+            .apply(list)
+            .reset_index(name="labels")
         )
+        print(f"GroupBy Labels: {len(labels_tbl)} {list(labels_tbl.columns)}")
+        print(labels_tbl)
+        # return duckdb.sql(f"SELECT * FROM lance_tbl USING SAMPLE {limit};").to_df()
+        df_hits = duckdb.sql(
+            f"""
+            SELECT lance_tbl.*, labels FROM lance_tbl
+            LEFT OUTER JOIN labels_tbl ON (lance_tbl.image_path = labels_tbl.image_path)
+            USING SAMPLE {limit} ROWS;
+        """
+        ).to_df()
+        df_hits["labels"] = df_hits["labels"].fillna("").apply(list)
+        df_hits.drop(columns=["vector"], inplace=True)
         return df_hits
 
     def search_by_image_path(self, image_path: str, limit: int) -> pd.DataFrame:
@@ -148,6 +188,9 @@ class VectorDB:
             .to_df()
         )
         df_hits = df_hits[df_hits["image_path"] != image_path][0:limit]
+
+        df_hits = self.__load_labels(df_hits)
+        df_hits.drop(columns=["vector"], inplace=True)
         return df_hits
 
     def search_by_text(self, query_string: str, limit: int) -> pd.DataFrame:
@@ -156,4 +199,16 @@ class VectorDB:
             .limit(limit)
             .to_df()
         )
+        df_hits = self.__load_labels(df_hits)
+        df_hits.drop(columns=["vector"], inplace=True)
+        return df_hits
+
+    def __load_labels(self, df_hits: pd.DataFrame) -> pd.DataFrame:
+        labels_tbl = (
+            self.df_labels.groupby(by="image_path")["label"]
+            .apply(list)
+            .reset_index(name="labels")
+        )
+        df_hits = pd.merge(how="left", left=df_hits, right=labels_tbl, on="image_path")
+        df_hits["labels"] = df_hits["labels"].fillna("").apply(list)
         return df_hits

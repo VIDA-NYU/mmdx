@@ -2,7 +2,7 @@ import os
 from flask import Flask, send_from_directory, request
 from mmdx.search import VectorDB
 from mmdx.model import ClipModel
-
+import numpy as np
 
 DATA_PATH = "client/public/"
 DB_PATH = "data/db/"
@@ -14,6 +14,8 @@ app = Flask(__name__)
 # Path for our main Svelte app. All routes in the app must be added
 # here to allow refreshing to work correctly.
 @app.route("/")
+@app.route("/search/random")
+@app.route("/search/image")
 @app.route("/bootstrap")
 def base():
     return send_from_directory("client/dist/", "index.html")
@@ -34,7 +36,6 @@ def images(path):
 def random_search():
     limit: int = request.args.get("limit", 12, type=int)
     hits = db.random_search(limit=limit)
-    hits.drop(columns=["vector"], inplace=True)
     return {"total": len(hits.index), "hits": hits.to_dict("records")}
 
 
@@ -43,7 +44,6 @@ def keyword_search():
     query: str = request.args.get("q")
     limit: int = request.args.get("limit", 12, type=int)
     hits = db.search_by_text(query_string=query, limit=limit)
-    hits.drop(columns=["vector"], inplace=True)
     return {"total": len(hits.index), "hits": hits.to_dict("records")}
 
 
@@ -52,8 +52,29 @@ def image_search():
     query: str = request.args.get("q")
     limit: str = request.args.get("limit", 12, type=int)
     hits = db.search_by_image_path(image_path=query, limit=limit)
-    hits.drop(columns=["vector"], inplace=True)
     return {"total": len(hits.index), "hits": hits.to_dict("records")}
+
+
+@app.route("/api/v1/add_label")
+def add_label():
+    image_path: str = request.args.get("image_path", None, type=str)
+    label: str = request.args.get("label", None, type=str)
+    db.add_label(image_path=image_path, label=label)
+    return {"success": True}
+
+
+@app.route("/api/v1/remove_label")
+def remove_label():
+    image_path: str = request.args.get("image_path", None, type=str)
+    label: str = request.args.get("label", None, type=str)
+    db.remove_label(image_path=image_path, label=label)
+    return {"success": True}
+
+
+@app.route("/api/v1/labels")
+def labels():
+    labels = db.get_labels()
+    return {"labels": labels}
 
 
 def create_db_for_data_path():

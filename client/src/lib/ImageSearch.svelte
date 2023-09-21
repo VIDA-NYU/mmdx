@@ -1,25 +1,25 @@
 <script lang="ts">
   import type { Hits } from "./Api";
-  import { similar } from "./Api";
+  import { similarSearch } from "./Api";
   import ImageCard from "./ImageCard.svelte";
 
-  const limit = 4 * 3;
   let imagePath = "";
   let result: Promise<Hits> | null = null;
 
   function searchSimilarImages(searchPath: string) {
+    const limit = 4 * 3;
     const params = new URLSearchParams(searchPath);
     const q = params.get("q");
     if (q) {
       imagePath = q;
-      result = similar(imagePath, limit);
+      result = similarSearch(imagePath, limit);
     }
   }
 
-  // received as component props
+  // location is received as component props
   export let location: Location;
   $: {
-    // this is triggered whenever the location variable (which contains the URL) changes
+    // this block is reactively triggered whenever the location variable (which contains the URL) changes
     searchSimilarImages(location.search);
   }
 </script>
