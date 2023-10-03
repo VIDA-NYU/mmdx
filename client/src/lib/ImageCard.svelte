@@ -202,6 +202,9 @@
     height: 2em !important;
     min-width: 100px !important;
   }
+  :global(.autocomplete-list-item-create) {
+    width: 169px !important;
+  }
   :global(.input-container) {
     /* width: 207px !important; */
     width: 171px !important;
