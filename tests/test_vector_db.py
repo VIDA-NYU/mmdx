@@ -3,7 +3,8 @@
 import pandas as pd
 import os
 from mmdx.db import LabelsDB
-from mmdx.search import VectorDB, find_files_in_path
+from mmdx.data_load import find_files_in_path
+from mmdx.search import VectorDB
 from mmdx.model import RandomMockModel
 
 data_path = "client/public/test-img-dataset"
