@@ -4,6 +4,7 @@ import pandas as pd
 import pyarrow as pa
 from .model import BaseEmbeddingModel
 from .db import LabelsDB
+from .settings import DB_BATCH_SIZE, DB_BATCH_LOAD, DEFAULT_TABLE_NAME
 import duckdb
 from typing import Iterator
 import numpy as np
@@ -16,11 +17,6 @@ duckdb.sql(
     LOAD sqlite;
     """
 )
-
-
-DB_BATCH_SIZE = 32
-DB_BATCH_LOAD = False
-DEFAULT_TABLE_NAME = "images"
 
 
 def find_files_in_path(path, file_extensions=(".png", ".jpg", "jpeg")) -> Iterator[str]:

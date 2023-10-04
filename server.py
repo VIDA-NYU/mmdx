@@ -3,10 +3,8 @@ from flask import Flask, send_from_directory, request
 from mmdx.search import VectorDB
 from mmdx.model import ClipModel
 import numpy as np
+from mmdx.settings import DATA_PATH, DB_PATH, DB_DELETE_EXISTING, DB_BATCH_LOAD
 
-DATA_PATH = "client/public/"
-DB_PATH = "data/db/"
-DB_DELETE_EXISTING = False
 
 app = Flask(__name__)
 
@@ -84,11 +82,13 @@ def create_db_for_data_path():
     print("Loading embedding model...")
     model = ClipModel()
 
-    print(f"Creating vector database:")
+    print(f"Loading vector database:")
     print(f" - DB path: {os.path.abspath(db_path)}")
     print(f" - Raw data path: {os.path.abspath(data_path)}")
+    print(f" - Delete existing?: {DB_DELETE_EXISTING}")
+    print(f" - Batch load?: {DB_BATCH_LOAD}")
     vectordb = VectorDB.from_data_path(
-        data_path, db_path, model, delete_existing=DB_DELETE_EXISTING, batch_load=True
+        data_path, db_path, model, delete_existing=DB_DELETE_EXISTING, batch_load=DB_BATCH_LOAD
     )
     print("Finished DB initialization.")
     return vectordb
