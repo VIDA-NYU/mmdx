@@ -4,11 +4,13 @@ import pandas as pd
 import pyarrow as pa
 from .model import BaseEmbeddingModel
 from .db import LabelsDB
-from .settings import DB_BATCH_SIZE, DB_BATCH_LOAD, DEFAULT_TABLE_NAME
+from .settings import DB_BATCH_SIZE, DB_BATCH_LOAD, DEFAULT_TABLE_NAME, DATA_SAMPLE_SIZE
 import duckdb
 from typing import Iterator
 import numpy as np
 import duckdb
+import random
+import tqdm
 
 
 duckdb.sql(
@@ -32,10 +34,16 @@ def load_batches(
     db: lancedb.DBConnection, table_name: str, data_path: str, model: BaseEmbeddingModel
 ) -> lancedb.table.Table:
     image_files = list(find_files_in_path(data_path))
+    print(f"Found {len(image_files)} images in {data_path}")
+
+    if DATA_SAMPLE_SIZE is not None:
+        print(f"Sampling {DATA_SAMPLE_SIZE} out of {len(image_files)} images...")
+        image_files = random.sample(image_files, DATA_SAMPLE_SIZE)
+
     batch_size = DB_BATCH_SIZE
 
     def make_batches() -> pa.RecordBatch:
-        for i in range(0, len(image_files), batch_size):
+        for i in tqdm.tqdm(range(0, len(image_files), batch_size)):
             image_paths = image_files[i : i + batch_size]
             embeddings = [
                 model.embed_image_path(os.path.join(data_path, path))
@@ -72,9 +80,16 @@ def load_batches(
 
 
 def make_df(data_path: str, model: BaseEmbeddingModel):
+    image_files = list(find_files_in_path(data_path))
+    print(f"Found {len(image_files)} images in {data_path}")
+
+    if DATA_SAMPLE_SIZE is not None:
+        print(f"Sampling {DATA_SAMPLE_SIZE} out of {len(image_files)} images...")
+        image_files = random.sample(image_files, DATA_SAMPLE_SIZE)
+
     image_paths = []
     vectors = []
-    for image_path in find_files_in_path(data_path):
+    for image_path in tqdm.tqdm(image_files):
         embedding = model.embed_image_path(
             image_path=os.path.join(data_path, image_path)
         )
