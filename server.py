@@ -48,7 +48,7 @@ def keyword_search():
 @app.route("/api/v1/image_search")
 def image_search():
     query: str = request.args.get("q")
-    limit: str = request.args.get("limit", 12, type=int)
+    limit: int = request.args.get("limit", 12, type=int)
     hits = db.search_by_image_path(image_path=query, limit=limit)
     return {"total": len(hits.index), "hits": hits.to_dict("records")}
 
