@@ -46,7 +46,7 @@ class ClipModel(BaseEmbeddingModel):
         return emb_tensor.detach().numpy()[0]
 
     def embed_image_path(self, image_path: str) -> np.ndarray:
-        return self.embed_image(Image.open(image_path))
+        return self.embed_image(Image.open(image_path).convert("RGB"))
 
 
 class RandomMockModel(BaseEmbeddingModel):

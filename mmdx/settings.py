@@ -30,7 +30,7 @@ DATA_PATH: str = os.getenv("DATA_PATH", default="client/public/")
 DB_PATH: str = os.getenv("DB_PATH", default="data/db/")
 DB_DELETE_EXISTING: bool = str(os.getenv("DB_DELETE_EXISTING")).lower() == "true"
 DB_BATCH_LOAD: bool = str(os.getenv("DB_BATCH_LOAD")).lower() == "true"
-DB_BATCH_SIZE: int = int(os.getenv("DB_BATCH_SIZE", default=32))
+DB_BATCH_SIZE: int = int(os.getenv("DB_BATCH_SIZE", default=16))
 DEFAULT_TABLE_NAME: str = "images"
 DATA_SAMPLE_SIZE: Optional[int] = parse_int(os.getenv("DATA_SAMPLE_SIZE"))
 

@@ -6,7 +6,7 @@ import duckdb
 from .data_load import load_batches, load_df
 from .model import BaseEmbeddingModel
 from .db import LabelsDB
-from .settings import DB_BATCH_LOAD, DEFAULT_TABLE_NAME
+from .settings import DEFAULT_TABLE_NAME, DB_BATCH_LOAD, DB_BATCH_SIZE
 
 
 duckdb.sql(
@@ -40,6 +40,7 @@ class VectorDB:
         model: BaseEmbeddingModel,
         delete_existing=True,
         batch_load: bool = DB_BATCH_LOAD,
+        batch_size: int = DB_BATCH_SIZE,
     ):
         db = lancedb.connect(db_path)
 
@@ -56,7 +57,7 @@ class VectorDB:
         else:
             print(f'Creating table "{table_name}"...')
             if batch_load:
-                tbl = load_batches(db, table_name, data_path, model)
+                tbl = load_batches(db, table_name, data_path, model, batch_size)
             else:
                 tbl = load_df(db, table_name, data_path, model)
             return VectorDB(db_path, db, tbl, model, data_path)

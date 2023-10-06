@@ -2,14 +2,14 @@ import os
 import lancedb
 import pandas as pd
 import pyarrow as pa
-from typing import Iterator
+from typing import Iterator, Optional
 import random
 import tqdm
 from .model import BaseEmbeddingModel
-from .settings import DB_BATCH_SIZE, DATA_SAMPLE_SIZE
+from .settings import DB_BATCH_SIZE, DATA_SAMPLE_SIZE, IMAGE_EXTENSIONS
 
 
-def find_files_in_path(path, file_extensions=(".png", ".jpg", "jpeg")) -> Iterator[str]:
+def find_files_in_path(path, file_extensions=IMAGE_EXTENSIONS) -> Iterator[str]:
     for dirpath, dirnames, filenames in os.walk(path):
         for filename in filenames:
             if filename.lower().endswith(file_extensions):
@@ -18,39 +18,62 @@ def find_files_in_path(path, file_extensions=(".png", ".jpg", "jpeg")) -> Iterat
                 yield file_path
 
 
-def load_batches(
-    db: lancedb.DBConnection, table_name: str, data_path: str, model: BaseEmbeddingModel
-) -> lancedb.table.Table:
+def load_images_from_path(data_path: str, sample_size=DATA_SAMPLE_SIZE):
     image_files = list(find_files_in_path(data_path))
     print(f"Found {len(image_files)} images in {data_path}")
+    if sample_size is not None:
+        print(f"Sampling {sample_size} out of {len(image_files)} images...")
+        image_files = random.sample(image_files, sample_size)
+    return image_files
 
-    if DATA_SAMPLE_SIZE is not None:
-        print(f"Sampling {DATA_SAMPLE_SIZE} out of {len(image_files)} images...")
-        image_files = random.sample(image_files, DATA_SAMPLE_SIZE)
 
-    batch_size = DB_BATCH_SIZE
+def embed_image_files(model: BaseEmbeddingModel, data_path, image_paths: list[str]):
+    embeddings = []
+    for path in image_paths:
+        try:
+            embedding = model.embed_image_path(image_path=os.path.join(data_path, path))
+            embeddings.append((path, embedding))
+        except Exception as e:
+            print(f"Failed to create embbeding for image {path}.", e)
+            embeddings.append((path, None))
+    return embeddings
 
-    def make_batches() -> pa.RecordBatch:
-        for i in tqdm.tqdm(range(0, len(image_files), batch_size)):
-            image_paths = image_files[i : i + batch_size]
-            embeddings = [
-                model.embed_image_path(os.path.join(data_path, path))
-                for path in image_paths
-            ]
-            image_paths_array = pa.array(image_paths)
-            embeddings_array = pa.array(
-                embeddings, pa.list_(pa.float32(), model.dimensions())
-            )
-            yield pa.RecordBatch.from_arrays(
-                [
-                    image_paths_array,
-                    embeddings_array,
-                ],
-                [
-                    "image_path",
-                    "vector",
-                ],
-            )
+
+def load_batches(
+    db: lancedb.DBConnection,
+    table_name: str,
+    data_path: str,
+    model: BaseEmbeddingModel,
+    batch_size=DB_BATCH_SIZE,
+) -> lancedb.table.Table:
+    image_files = load_images_from_path(data_path)
+
+    def make_batches() -> Iterator[pa.RecordBatch]:
+        with tqdm.tqdm(total=len(image_files)) as progress_bar:
+            for i in range(0, len(image_files), batch_size):
+                image_paths = image_files[i : i + batch_size]
+
+                results = embed_image_files(model, data_path, image_paths)
+                valid_image_paths = [path for path, emb in results if emb is not None]
+                valid_embeddings = [emb for path, emb in results if emb is not None]
+
+                image_paths_array = pa.array(valid_image_paths)
+                embeddings_array = pa.array(
+                    valid_embeddings, pa.list_(pa.float32(), model.dimensions())
+                )
+
+                progress_bar.update(len(image_paths))
+
+                yield pa.RecordBatch.from_arrays(
+                    [
+                        image_paths_array,
+                        embeddings_array,
+                    ],
+                    [
+                        "image_path",
+                        "vector",
+                    ],
+                )
 
     db_schema = pa.schema(
         [
@@ -67,21 +90,14 @@ def load_batches(
 
 
 def make_df(data_path: str, model: BaseEmbeddingModel):
-    image_files = list(find_files_in_path(data_path))
-    print(f"Found {len(image_files)} images in {data_path}")
-
-    if DATA_SAMPLE_SIZE is not None:
-        print(f"Sampling {DATA_SAMPLE_SIZE} out of {len(image_files)} images...")
-        image_files = random.sample(image_files, DATA_SAMPLE_SIZE)
-
+    image_files = load_images_from_path(data_path)
     image_paths = []
     vectors = []
     for image_path in tqdm.tqdm(image_files):
-        embedding = model.embed_image_path(
-            image_path=os.path.join(data_path, image_path)
-        )
-        vectors.append(embedding)
-        image_paths.append(image_path)
+        image_path, embedding = embed_image_files(model, data_path, [image_path])[0]
+        if embedding is not None:
+            vectors.append(embedding)
+            image_paths.append(image_path)
 
     df = pd.DataFrame(
         {
@@ -93,7 +109,6 @@ def make_df(data_path: str, model: BaseEmbeddingModel):
 
 
 def load_df(
-        db: lancedb.DBConnection, table_name: str, data_path: str, model: BaseEmbeddingModel
+    db: lancedb.DBConnection, table_name: str, data_path: str, model: BaseEmbeddingModel
 ) -> lancedb.table.Table:
     return db.create_table(table_name, data=make_df(data_path, model))
-

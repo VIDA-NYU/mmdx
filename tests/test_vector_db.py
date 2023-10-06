@@ -12,7 +12,7 @@ data_path = "client/public/test-img-dataset"
 
 def test_find_files_in_path():
     image_files = list(find_files_in_path(data_path))
-    assert len(image_files) == 12
+    assert len(image_files) == 13
 
 
 def test_create_vector_from_path_and_search(tmp_path):
@@ -83,7 +83,7 @@ def test_load_db_dataframe(tmp_path):
     image_files = list(find_files_in_path(data_path))
 
     db = VectorDB.from_data_path(
-        data_path, db_path, model, delete_existing=True, batch_load=False
+        data_path, db_path, model, delete_existing=True, batch_load=False, batch_size=3
     )
 
     total_count = db.count_rows()
