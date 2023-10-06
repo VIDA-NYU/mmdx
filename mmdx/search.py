@@ -3,6 +3,7 @@ import lancedb
 import pandas as pd
 import numpy as np
 import duckdb
+from typing import Optional, List
 from .data_load import load_batches, load_df
 from .model import BaseEmbeddingModel
 from .db import LabelsDB
@@ -77,7 +78,7 @@ class VectorDB:
     def remove_label(self, image_path: str, label: str):
         self.labelsdb.remove(image_path=image_path, label=label)
 
-    def get_labels(self, image_path: str = None) -> list[str]:
+    def get_labels(self, image_path: Optional[str] = None) -> List[str]:
         return self.labelsdb.get(image_path=image_path)
 
     def random_search(self, limit: int) -> pd.DataFrame:

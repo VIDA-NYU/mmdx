@@ -1,13 +1,15 @@
 import threading
 import sqlite3
-from typing import NamedTuple
+from typing import NamedTuple, List, Dict, Optional
 
 
 class DBConn(NamedTuple):
     conn: sqlite3.Connection
     cursor: sqlite3.Cursor
 
-db_conns: dict[str:DBConn] = {}
+
+db_conns: Dict[str, threading.local] = {}
+
 
 def get_db_connection(db_file: str) -> DBConn:
     # Get or create a thread-local variable for the given database file,
@@ -51,7 +53,7 @@ class LabelsDB:
         )
         conn.commit()
 
-    def get(self, image_path: str = None) -> list[str]:
+    def get(self, image_path: Optional[str] = None) -> List[str]:
         _, cursor = get_db_connection(self.db_file)
         if image_path is None:
             cursor.execute("SELECT DISTINCT label FROM labels;")

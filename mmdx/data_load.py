@@ -2,7 +2,7 @@ import os
 import lancedb
 import pandas as pd
 import pyarrow as pa
-from typing import Iterator, Optional
+from typing import Iterator, List, Optional
 import random
 import tqdm
 from .model import BaseEmbeddingModel
@@ -27,7 +27,7 @@ def load_images_from_path(data_path: str, sample_size=DATA_SAMPLE_SIZE):
     return image_files
 
 
-def embed_image_files(model: BaseEmbeddingModel, data_path, image_paths: list[str]):
+def embed_image_files(model: BaseEmbeddingModel, data_path, image_paths: List[str]):
     embeddings = []
     for path in image_paths:
         try:

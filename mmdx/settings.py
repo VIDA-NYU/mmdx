@@ -1,18 +1,18 @@
 import os
 from dotenv import load_dotenv
-from typing import Optional
+from typing import Optional, Tuple
 
 load_dotenv()  # take environment variables from .env.
 
 
-def parse_image_extensions(value: str, default: list[str]) -> tuple[str]:
+def parse_image_extensions(value: Optional[str], default: tuple) -> tuple:
     if value is None or value.strip() == "":
         return default
     else:
         return tuple([f".{ext.strip().strip('.')}" for ext in value.split(",")])
 
 
-def parse_int(value: str, default: Optional[int] = None) -> Optional[int]:
+def parse_int(value: Optional[str], default: Optional[int] = None) -> Optional[int]:
     if value is None or value.strip() == "":
         return default
     else:
@@ -22,7 +22,7 @@ def parse_int(value: str, default: Optional[int] = None) -> Optional[int]:
             return None
 
 
-IMAGE_EXTENSIONS: tuple[str] = parse_image_extensions(
+IMAGE_EXTENSIONS: Tuple[str, ...] = parse_image_extensions(
     os.getenv("IMAGE_EXTENSIONS"),
     default=(".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"),
 )
