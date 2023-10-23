@@ -7,7 +7,7 @@
   let result: Promise<Hits> | null = null;
 
   function searchSimilarImages(searchPath: string) {
-    const limit = 4 * 3;
+    const limit = 8 * 3;
     const params = new URLSearchParams(searchPath);
     const q = params.get("q");
     if (q) {
@@ -64,6 +64,16 @@
               <ImageCard {hit} />
             </div>
           {/each}
+        </div>
+        <div class="d-flex justify-content-evenly">
+          <btn class="btn btn-secondary" on:click={labelAllAsRelevant}>
+            <i class="fa fa-thumbs-up" aria-hidden="true" />
+            Label ALL as relevant
+          </btn>
+          <btn class="btn btn-secondary" on:click={labelAllAsIrrelevant}>
+            <i class="fa fa-thumbs-down" aria-hidden="true" />
+            Label ALL as irrelevant
+          </btn>
         </div>
       {/if}
     {:catch error}

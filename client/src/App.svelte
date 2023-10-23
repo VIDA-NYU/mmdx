@@ -7,6 +7,7 @@
   import Search from "./lib/Search.svelte";
   import Random from "./lib/Random.svelte";
   import ImageSearch from "./lib/ImageSearch.svelte";
+  import LabeledData from "./lib/LabeledData.svelte";
 
   export let url = "";
 
@@ -53,6 +54,7 @@
               >Random Search</Link
             >
             <Link to="/search/image" getProps={getLinkProps}>Image Search</Link>
+            <Link to="/labels" getProps={getLinkProps}>Labels</Link>
             <!-- <Link to="/bootstrap" getProps={getLinkProps}>Bootstrap</Link> -->
           </div>
         </div>
@@ -67,6 +69,7 @@
         component={ImageSearch}
         location={window.location}
       />
+      <Route path="/labels" component={LabeledData} />
       <Route path="/bootstrap" component={BootstrapComponents} />
     </div>
   </Router>

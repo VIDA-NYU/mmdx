@@ -7,7 +7,7 @@
   let result: Promise<Hits> | null = null;
 
   function onQuerySubmit() {
-    const limit = 4 * 2;
+    const limit = 4 * 8;
     result = random(limit);
   }
 

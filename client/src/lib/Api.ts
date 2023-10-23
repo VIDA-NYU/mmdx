@@ -79,6 +79,16 @@ export async function removeLabel(image_path: string, label: string): Promise<Ad
     return response;
 }
 
+export function downloadFile() {
+    const url = `${API_URL}/download/binary_labeled_data`
+    const link = document.createElement('a');
+    link.href = url;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+
 interface FetchInit {
     method: string;
     headers: { [index: string]: string };

@@ -1,5 +1,6 @@
+from datetime import datetime
 import os
-from flask import Flask, send_from_directory, request
+from flask import Flask, send_from_directory, send_file, request
 from mmdx.search import VectorDB
 from mmdx.model import ClipModel
 import numpy as np
@@ -14,6 +15,7 @@ app = Flask(__name__)
 @app.route("/")
 @app.route("/search/random")
 @app.route("/search/image")
+@app.route("/labels")
 @app.route("/bootstrap")
 def base():
     return send_from_directory("client/dist/", "index.html")
@@ -75,6 +77,17 @@ def labels():
     return {"labels": labels}
 
 
+@app.route("/api/v1/download/binary_labeled_data")
+def download_binary_labeled_data():
+    current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    filename = f"binary_labeled_data_{current_time}.zip"
+    output_zip_file = db.create_zip_labeled_binary_data(
+        output_dir=os.path.join(DB_PATH, "downloads"), filename=filename
+    )
+    print("Created zip file: ", output_zip_file)
+    return send_file(output_zip_file, as_attachment=True)
+
+
 def create_db_for_data_path():
     data_path = DATA_PATH
     db_path = DB_PATH
@@ -88,7 +101,11 @@ def create_db_for_data_path():
     print(f" - Delete existing?: {DB_DELETE_EXISTING}")
     print(f" - Batch load?: {DB_BATCH_LOAD}")
     vectordb = VectorDB.from_data_path(
-        data_path, db_path, model, delete_existing=DB_DELETE_EXISTING, batch_load=DB_BATCH_LOAD
+        data_path,
+        db_path,
+        model,
+        delete_existing=DB_DELETE_EXISTING,
+        batch_load=DB_BATCH_LOAD,
     )
     print("Finished DB initialization.")
     return vectordb
