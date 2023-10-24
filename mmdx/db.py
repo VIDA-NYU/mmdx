@@ -7,7 +7,9 @@ class DBConn(NamedTuple):
     conn: sqlite3.Connection
     cursor: sqlite3.Cursor
 
+
 db_conns: dict[str:DBConn] = {}
+
 
 def get_db_connection(db_file: str) -> DBConn:
     # Get or create a thread-local variable for the given database file,
@@ -61,3 +63,27 @@ class LabelsDB:
                 (image_path,),
             )
         return [row[0] for row in cursor.fetchall()]
+
+    def update(self, old_tuple, new_tuple):
+        conn, cursor = get_db_connection(self.db_file)
+        cursor.execute(
+            """
+            UPDATE labels
+            SET image_path = ?, label = ?
+            WHERE image_path = ? AND label = ?;
+        """,
+            (
+                new_tuple["image_path"],
+                new_tuple["label"],
+                old_tuple["image_path"],
+                old_tuple["label"],
+            ),
+        )
+        conn.commit()
+
+    def get_all(self, image_path: str = None) -> list[str]:
+        _, cursor = get_db_connection(self.db_file)
+        cursor.execute(
+            "SELECT image_path, label FROM labels;",
+        )
+        return [row for row in cursor.fetchall()]
