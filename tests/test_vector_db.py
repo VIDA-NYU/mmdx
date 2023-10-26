@@ -248,3 +248,7 @@ def test_label_db():
     assert set(db.get()) == set(["label_1", "label_3"])
     assert set(db.get(image_path="image_1")) == set([])
     assert set(db.get(image_path="image_2")) == set(["label_1", "label_3"])
+
+    label_counts = db.counts()
+    assert label_counts['label_1'] == 1
+    assert label_counts['label_3'] == 1

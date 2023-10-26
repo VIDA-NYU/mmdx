@@ -63,3 +63,11 @@ class LabelsDB:
                 (image_path,),
             )
         return [row[0] for row in cursor.fetchall()]
+
+    def counts(self) -> dict[str, int]:
+        _, cursor = get_db_connection(self.db_file)
+        cursor.execute("SELECT label, COUNT(*) FROM labels GROUP BY label;")
+        counts = {}
+        for row in cursor.fetchall():
+            counts[row[0]] = row[1]
+        return counts

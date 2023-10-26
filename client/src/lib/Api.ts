@@ -69,7 +69,7 @@ interface RemoveLabelResponse {
     success: boolean;
 }
 
-export async function removeLabel(image_path: string, label: string): Promise<AddLabelResponse> {
+export async function removeLabel(image_path: string, label: string): Promise<RemoveLabelResponse> {
     const response = await fetchJSON<RemoveLabelResponse>("/remove_label", {
         image_path,
         label
@@ -78,6 +78,27 @@ export async function removeLabel(image_path: string, label: string): Promise<Ad
     });
     return response;
 }
+
+export function downloadFile() {
+    const url = `${API_URL}/download/binary_labeled_data`
+    const link = document.createElement('a');
+    link.href = url;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+
+export interface LabelCountsResponse {
+    counts: { [index: string]: number };
+}
+
+export function labelCounts(): Promise<LabelCountsResponse> {
+    return fetchJSON<LabelCountsResponse>("/label_counts").catch((e) => {
+        throw new Error("Failed to load label counts.", { cause: e })
+    });
+}
+
 
 interface FetchInit {
     method: string;

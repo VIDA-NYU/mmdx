@@ -7,15 +7,25 @@ import random
 import tqdm
 from .model import BaseEmbeddingModel
 from .settings import DB_BATCH_SIZE, DATA_SAMPLE_SIZE, IMAGE_EXTENSIONS
+import imghdr
+
+
+def detect_image_type(image_path: str) -> Optional[str]:
+    return imghdr.what(image_path)
 
 
 def find_files_in_path(path, file_extensions=IMAGE_EXTENSIONS) -> Iterator[str]:
     for dirpath, dirnames, filenames in os.walk(path):
         for filename in filenames:
+            relative_dir = dirpath.replace(path, "")
+            file_path = os.path.join(relative_dir, filename)
             if filename.lower().endswith(file_extensions):
-                relative_dir = dirpath.replace(path, "")
-                file_path = os.path.join(relative_dir, filename)
                 yield file_path
+            else:
+                absolute_path = os.path.join(dirpath, filename)
+                image_type = detect_image_type(absolute_path)
+                if f".{image_type}" in file_extensions:
+                    yield file_path
 
 
 def load_images_from_path(data_path: str, sample_size=DATA_SAMPLE_SIZE):
