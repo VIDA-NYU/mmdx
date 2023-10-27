@@ -6,13 +6,14 @@
   let imagePath = "";
   let result: Promise<Hits> | null = null;
   let limit: string = "16";
+  let excludeLabeled: boolean = false;
 
   function searchSimilarImages(searchPath: string) {
     const params = new URLSearchParams(searchPath);
     const q = params.get("q");
     if (q) {
       imagePath = q;
-      result = similarSearch(imagePath, +limit);
+      result = similarSearch(imagePath, +limit, excludeLabeled);
     }
   }
 
@@ -29,7 +30,7 @@
 </script>
 
 <div class="container">
-  <div class="py-5">
+  <div class="py-4">
     <div class="row">
       <div class="input-group input-group-lg">
         <span class="input-group-text p-0">
@@ -55,7 +56,7 @@
           Number of results:
         </label>
       </div>
-      <div class="col-auto">
+      <div class="col-auto me-3">
         <select
           class="form-select form-select-sm"
           id="limitSelect"
@@ -68,6 +69,18 @@
           <option value="32">32</option>
           <option value="64">64</option>
         </select>
+      </div>
+      <div class="col-auto form-check">
+        <input
+          class="form-check-input"
+          type="checkbox"
+          id="excludeLabeledCheck"
+          bind:checked={excludeLabeled}
+          on:change={onQuerySubmit}
+        />
+        <label class="form-check-label" for="excludeLabeledCheck">
+          Exclude labeled
+        </label>
       </div>
       {#await result}
         <div class="col-auto">

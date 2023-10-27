@@ -17,7 +17,7 @@
 </script>
 
 <div class="container">
-  <div class="py-5">
+  <div class="py-4">
     <div class="row gy-2 gx-2 align-items-center">
       <div class="col-auto me-2">
         <button class="btn btn-primary" on:click={onQuerySubmit}>

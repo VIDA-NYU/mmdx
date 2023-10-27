@@ -102,25 +102,57 @@ class VectorDB:
         df_hits.drop(columns=["vector"], inplace=True)
         return df_hits
 
-    def search_by_image_path(self, image_path: str, limit: int) -> pd.DataFrame:
+    def search_by_image_path(
+        self, image_path: str, limit: int, exclude_labeled: bool
+    ) -> pd.DataFrame:
         full_image_path = os.path.join(self.data_path, image_path)
         image_embedding = self.model.embed_image_path(full_image_path)
         df_hits = self.__vector_embedding_search(
-            image_embedding, limit, exclude_image_path=image_path
+            image_embedding,
+            limit,
+            exclude_image_path=image_path,
+            exclude_labeled=exclude_labeled,
         )
         return df_hits
 
-    def search_by_text(self, query_string: str, limit: int) -> pd.DataFrame:
+    def search_by_text(
+        self, query_string: str, limit: int, exclude_labeled: bool
+    ) -> pd.DataFrame:
         query_str_embedding = self.model.embed_text(query=query_string)
-        df_hits = self.__vector_embedding_search(query_str_embedding, limit)
+        df_hits = self.__vector_embedding_search(
+            query_str_embedding, limit, exclude_labeled
+        )
         return df_hits
 
     def __vector_embedding_search(
-        self, embedding: np.ndarray, limit: int, exclude_image_path=str
+        self,
+        embedding: np.ndarray,
+        limit: int,
+        exclude_labeled: bool,
+        exclude_image_path: str = None,
     ) -> pd.DataFrame:
-        df_hits = self.tbl.search(embedding).limit(limit + 1).to_df()
+        if exclude_labeled:
+            exclude_image_paths = set(self.labelsdb.get_image_paths())
+        else:
+            exclude_image_paths = set()
+
         if exclude_image_path is not None:
-            df_hits = df_hits[df_hits["image_path"] != exclude_image_path][0:limit]
+            exclude_image_paths.add(exclude_image_path)
+
+        if len(exclude_image_paths) == 0:
+            df_hits = self.tbl.search(embedding).limit(limit).to_df()
+        else:
+            exclude_image_paths_str = ",".join(
+                [f"'{image_path}'" for image_path in exclude_image_paths]
+            )
+            df_hits = (
+                self.tbl.search(embedding)
+                .where(f"image_path NOT IN ({exclude_image_paths_str})")
+                .limit(limit + len(exclude_image_paths))
+                .to_df()
+            )
+            df_hits = df_hits[0:limit]
+
         df_hits.drop(columns=["vector"], inplace=True)
         df_hits = self.__join_labels(left_table=df_hits)
         return df_hits
