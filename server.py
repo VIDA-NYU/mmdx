@@ -4,7 +4,18 @@ from flask import Flask, send_from_directory, send_file, request
 from mmdx.search import VectorDB
 from mmdx.model import ClipModel
 import numpy as np
-from mmdx.settings import DATA_PATH, DB_PATH, DB_DELETE_EXISTING, DB_BATCH_LOAD
+from mmdx.settings import (
+    DATA_PATH,
+    DB_PATH,
+    DB_DELETE_EXISTING,
+    DB_BATCH_LOAD,
+    MINIO_ACCESS_KEY,
+    MINIO_ENDPOINT,
+    MINIO_SECRET_KEY,
+    DATA_SOURCE,
+)
+from mmdx.minio_client import MinioClient
+from io import BytesIO
 
 
 app = Flask(__name__)
@@ -29,7 +40,16 @@ def assets(path):
 
 @app.route("/images/<path:path>")
 def images(path):
-    return send_from_directory(DATA_PATH, path)
+    if DATA_SOURCE.upper() == "S3":
+        image_data = minio_client.get_obj(DATA_PATH, path)
+        image_buffer = BytesIO(image_data.read())
+        return send_file(
+            image_buffer,
+            as_attachment=False,
+            download_name=path,
+        )
+    else:
+        return send_from_directory(DATA_PATH, path)
 
 
 @app.route("/api/v1/random")
@@ -51,7 +71,9 @@ def keyword_search():
 def image_search():
     query: str = request.args.get("q")
     limit: int = request.args.get("limit", 12, type=int)
-    hits = db.search_by_image_path(image_path=query, limit=limit)
+    hits = db.search_by_image_path(
+        image_path=query, limit=limit, minio_client=minio_client
+    )
     return {"total": len(hits.index), "hits": hits.to_dict("records")}
 
 
@@ -95,21 +117,28 @@ def download_binary_labeled_data():
     return send_file(output_zip_file, as_attachment=True)
 
 
-def create_db_for_data_path():
+def create_db_for_data_path(minio_client):
     data_path = DATA_PATH
     db_path = DB_PATH
+
+    if DATA_SOURCE.upper() == "S3":
+        data_path_msg = f" - Data Bucket: {data_path}"
+    else:
+        minio_client = None
+        data_path_msg = f" - Raw data path: {os.path.abspath(data_path)}"
 
     print("Loading embedding model...")
     model = ClipModel()
 
     print(f"Loading vector database:")
     print(f" - DB path: {os.path.abspath(db_path)}")
-    print(f" - Raw data path: {os.path.abspath(data_path)}")
+    print(data_path_msg)
     print(f" - Delete existing?: {DB_DELETE_EXISTING}")
     print(f" - Batch load?: {DB_BATCH_LOAD}")
     vectordb = VectorDB.from_data_path(
         data_path,
         db_path,
+        minio_client,
         model,
         delete_existing=DB_DELETE_EXISTING,
         batch_load=DB_BATCH_LOAD,
@@ -118,7 +147,17 @@ def create_db_for_data_path():
     return vectordb
 
 
-db: VectorDB = create_db_for_data_path()
+if DATA_SOURCE.upper() == "S3":
+    minio_client = MinioClient(
+        access_key=MINIO_ACCESS_KEY,
+        secret_access_key=MINIO_SECRET_KEY,
+        minio_endpoint=MINIO_ENDPOINT,
+    )
+else:
+    minio_client=None
+
+
+db: VectorDB = create_db_for_data_path(minio_client)
 
 if __name__ == "__main__":
     if os.environ.get("ENV") == "prod":

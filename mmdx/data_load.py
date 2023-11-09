@@ -8,6 +8,8 @@ import tqdm
 from .model import BaseEmbeddingModel
 from .settings import DB_BATCH_SIZE, DATA_SAMPLE_SIZE, IMAGE_EXTENSIONS
 import imghdr
+from io import BytesIO
+from .minio_client import MinioClient
 
 
 def detect_image_type(image_path: str) -> Optional[str]:
@@ -37,11 +39,33 @@ def load_images_from_path(data_path: str, sample_size=DATA_SAMPLE_SIZE):
     return image_files
 
 
-def embed_image_files(model: BaseEmbeddingModel, data_path, image_paths: List[str]):
+def load_images_from_minio(
+    data_path: str, minio_client: MinioClient, sample_size=DATA_SAMPLE_SIZE
+):
+    image_files = minio_client.list_objects_names(data_path)
+    print(f"Found {len(image_files)} images in {data_path}")
+    if sample_size is not None:
+        print(f"Sampling {sample_size} out of {len(image_files)} images...")
+        image_files = random.sample(image_files, sample_size)
+    return image_files
+
+def embed_image_files(
+    model: BaseEmbeddingModel,
+    data_path: str,
+    image_paths: List[str],
+    minio_client: Optional[MinioClient],
+):
     embeddings = []
     for path in image_paths:
         try:
-            embedding = model.embed_image_path(image_path=os.path.join(data_path, path))
+            if isinstance(minio_client, MinioClient):
+                image_data = minio_client.get_obj(data_path, path)
+                image_buffer = BytesIO(image_data.read())
+                embedding = model.embed_image_path(image_buffer)
+            else:
+                embedding = model.embed_image_path(
+                    image_path=os.path.join(data_path, path)
+                )
             embeddings.append((path, embedding))
         except Exception as e:
             print(f"Failed to create embbeding for image {path}.", e)
@@ -53,17 +77,21 @@ def load_batches(
     db: lancedb.DBConnection,
     table_name: str,
     data_path: str,
+    minio_client: Optional[MinioClient],
     model: BaseEmbeddingModel,
     batch_size=DB_BATCH_SIZE,
 ) -> lancedb.table.Table:
-    image_files = load_images_from_path(data_path)
+    if isinstance(minio_client, MinioClient):
+        image_files = load_images_from_minio(data_path, minio_client)
+    else:
+        image_files = load_images_from_path(data_path)
 
     def make_batches() -> Iterator[pa.RecordBatch]:
         with tqdm.tqdm(total=len(image_files)) as progress_bar:
             for i in range(0, len(image_files), batch_size):
                 image_paths = image_files[i : i + batch_size]
 
-                results = embed_image_files(model, data_path, image_paths)
+                results = embed_image_files(model, data_path, image_paths, minio_client)
                 valid_image_paths = [path for path, emb in results if emb is not None]
                 valid_embeddings = [emb for path, emb in results if emb is not None]
 
@@ -99,8 +127,14 @@ def load_batches(
     return tbl
 
 
-def make_df(data_path: str, model: BaseEmbeddingModel):
-    image_files = load_images_from_path(data_path)
+def make_df(
+    data_path: str, model: BaseEmbeddingModel, minio_client: Optional[MinioClient]
+):
+    if minio_client:
+        image_files = load_images_from_path(data_path)
+    else:
+        image_files = load_images_from_path(data_path)
+
     image_paths = []
     vectors = []
     for image_path in tqdm.tqdm(image_files):
@@ -119,6 +153,10 @@ def make_df(data_path: str, model: BaseEmbeddingModel):
 
 
 def load_df(
-    db: lancedb.DBConnection, table_name: str, data_path: str, model: BaseEmbeddingModel
+    db: lancedb.DBConnection,
+    table_name: str,
+    data_path: str,
+    model: BaseEmbeddingModel,
+    minio_client: Optional[MinioClient],
 ) -> lancedb.table.Table:
-    return db.create_table(table_name, data=make_df(data_path, model))
+    return db.create_table(table_name, data=make_df(data_path, model, minio_client))

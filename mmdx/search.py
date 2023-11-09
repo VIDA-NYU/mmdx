@@ -10,6 +10,8 @@ from .data_load import load_batches, load_df
 from .model import BaseEmbeddingModel
 from .db import LabelsDB
 from .settings import DEFAULT_TABLE_NAME, DB_BATCH_LOAD, DB_BATCH_SIZE
+from .minio_client import MinioClient
+from io import BytesIO
 
 
 duckdb.sql(
@@ -40,6 +42,7 @@ class VectorDB:
     def from_data_path(
         data_path: str,
         db_path: str,
+        minio_client: Optional[MinioClient],
         model: BaseEmbeddingModel,
         delete_existing=True,
         batch_load: bool = DB_BATCH_LOAD,
@@ -60,9 +63,9 @@ class VectorDB:
         else:
             print(f'Creating table "{table_name}"...')
             if batch_load:
-                tbl = load_batches(db, table_name, data_path, model, batch_size)
+                tbl = load_batches(db, table_name, data_path, minio_client, model, batch_size)
             else:
-                tbl = load_df(db, table_name, data_path, model)
+                tbl = load_df(db, table_name, data_path, model, minio_client)
             return VectorDB(db_path, db, tbl, model, data_path)
 
     def count_rows(self) -> int:
@@ -102,9 +105,14 @@ class VectorDB:
         df_hits.drop(columns=["vector"], inplace=True)
         return df_hits
 
-    def search_by_image_path(self, image_path: str, limit: int) -> pd.DataFrame:
-        full_image_path = os.path.join(self.data_path, image_path)
-        image_embedding = self.model.embed_image_path(full_image_path)
+    def search_by_image_path(self, image_path: str, limit: int, minio_client: Optional[MinioClient]) -> pd.DataFrame:
+        if minio_client:
+            image_data = minio_client.get_obj(self.data_path, image_path)
+            image = BytesIO(image_data.read())
+        else:
+            image = os.path.join(self.data_path, image_path)
+
+        image_embedding = self.model.embed_image_path(image)
         df_hits = self.__vector_embedding_search(
             image_embedding, limit, exclude_image_path=image_path
         )
