@@ -88,7 +88,7 @@
 
   <div class="card-body">
     <p class="card-text mb-2">
-      {hit.image_path}
+      {hit.title ? hit.title : hit.image_path}
     </p>
     <div class="btn-toolbar mt-1">
       <div class="btn-group me-2" role="group" aria-label="">

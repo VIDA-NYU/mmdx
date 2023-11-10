@@ -39,4 +39,6 @@ MINIO_ACCESS_KEY: str = os.getenv("MINIO_ACCESS_KEY", default=None)
 MINIO_SECRET_KEY: str = os.getenv("MINIO_SECRET_KEY", default=None)
 MINIO_ENDPOINT: str = os.getenv("MINIO_ENDPOINT", default=None)
 MINIO_ENDPOINT_URL: str = os.getenv("MINIO_URL_ENDPOINT", default=None)
+DEFAULT_CSV_BUCKET: str = "labeling-csv"
+CSV_FILENAME: str = os.getenv("CSV_FILENAME", default=None)
 

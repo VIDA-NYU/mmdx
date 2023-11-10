@@ -6,7 +6,13 @@ from typing import Iterator, List, Optional
 import random
 import tqdm
 from .model import BaseEmbeddingModel
-from .settings import DB_BATCH_SIZE, DATA_SAMPLE_SIZE, IMAGE_EXTENSIONS
+from .settings import (
+    DB_BATCH_SIZE,
+    DATA_SAMPLE_SIZE,
+    IMAGE_EXTENSIONS,
+    CSV_FILENAME,
+    DEFAULT_CSV_BUCKET,
+)
 import imghdr
 from io import BytesIO
 from .minio_client import MinioClient
@@ -42,12 +48,26 @@ def load_images_from_path(data_path: str, sample_size=DATA_SAMPLE_SIZE):
 def load_images_from_minio(
     data_path: str, minio_client: MinioClient, sample_size=DATA_SAMPLE_SIZE
 ):
-    image_files = minio_client.list_objects_names(data_path)
+    image_files, df = get_image_files(data_path, minio_client)
     print(f"Found {len(image_files)} images in {data_path}")
     if sample_size is not None:
         print(f"Sampling {sample_size} out of {len(image_files)} images...")
         image_files = random.sample(image_files, sample_size)
-    return image_files
+    return image_files, df
+
+
+def get_image_files(data_path: str, minio_client: MinioClient):
+    if CSV_FILENAME:
+        print("Getting images from CSV file")
+        csv_data = minio_client.get_obj(DEFAULT_CSV_BUCKET, CSV_FILENAME)
+        df = pd.read_csv(BytesIO(csv_data.read()))
+        image_files = df["image_path"].to_list()
+    else:
+        image_files = minio_client.list_objects_names(data_path)
+        df = None
+
+    return image_files, df
+
 
 def embed_image_files(
     model: BaseEmbeddingModel,
@@ -82,7 +102,7 @@ def load_batches(
     batch_size=DB_BATCH_SIZE,
 ) -> lancedb.table.Table:
     if isinstance(minio_client, MinioClient):
-        image_files = load_images_from_minio(data_path, minio_client)
+        image_files, df = load_images_from_minio(data_path, minio_client)
     else:
         image_files = load_images_from_path(data_path)
 
@@ -94,20 +114,29 @@ def load_batches(
                 results = embed_image_files(model, data_path, image_paths, minio_client)
                 valid_image_paths = [path for path, emb in results if emb is not None]
                 valid_embeddings = [emb for path, emb in results if emb is not None]
+                valid_title = (
+                    df[df["image_path"].isin(valid_image_paths)]["title"]
+                    .str.encode("utf-8", errors="replace")
+                    .str.decode("utf-8")
+                    .tolist()
+                )
 
                 image_paths_array = pa.array(valid_image_paths)
                 embeddings_array = pa.array(
                     valid_embeddings, pa.list_(pa.float32(), model.dimensions())
                 )
+                titles_array = pa.array(valid_title)
 
                 progress_bar.update(len(image_paths))
 
                 yield pa.RecordBatch.from_arrays(
                     [
+                        titles_array,
                         image_paths_array,
                         embeddings_array,
                     ],
                     [
+                        "title",
                         "image_path",
                         "vector",
                     ],
@@ -115,6 +144,7 @@ def load_batches(
 
     db_schema = pa.schema(
         [
+            pa.field("title", pa.utf8()),
             pa.field("image_path", pa.utf8()),
             pa.field("vector", pa.list_(pa.float32(), model.dimensions())),
         ]
@@ -131,20 +161,25 @@ def make_df(
     data_path: str, model: BaseEmbeddingModel, minio_client: Optional[MinioClient]
 ):
     if minio_client:
-        image_files = load_images_from_path(data_path)
+        image_files, df = load_images_from_minio(data_path, minio_client)
     else:
         image_files = load_images_from_path(data_path)
 
+    titles = []
     image_paths = []
     vectors = []
     for image_path in tqdm.tqdm(image_files):
-        image_path, embedding = embed_image_files(model, data_path, [image_path])[0]
+        image_path, embedding = embed_image_files(
+            model, data_path, [image_path], minio_client
+        )[0]
         if embedding is not None:
             vectors.append(embedding)
             image_paths.append(image_path)
+            titles.append(df.loc[df["image_path"] == image_path, "title"].values[0])
 
     df = pd.DataFrame(
         {
+            "title": titles,
             "image_path": image_paths,
             "vector": vectors,
         }

@@ -8,6 +8,7 @@ export interface Hits {
 export interface Hit {
     _distance: number;
     image_path: string;
+    title: string;
     labels?: string[];
 }
 
