@@ -10,7 +10,7 @@ from .data_load import load_batches, load_df
 from .model import BaseEmbeddingModel
 from .db import LabelsDB
 from .settings import DEFAULT_TABLE_NAME, DB_BATCH_LOAD, DB_BATCH_SIZE
-from .minio_client import MinioClient
+from .s3_client import S3Client
 from io import BytesIO
 
 
@@ -42,7 +42,7 @@ class VectorDB:
     def from_data_path(
         data_path: str,
         db_path: str,
-        minio_client: Optional[MinioClient],
+        S3_Client: Optional[S3Client],
         model: BaseEmbeddingModel,
         delete_existing=True,
         batch_load: bool = DB_BATCH_LOAD,
@@ -63,9 +63,9 @@ class VectorDB:
         else:
             print(f'Creating table "{table_name}"...')
             if batch_load:
-                tbl = load_batches(db, table_name, data_path, minio_client, model, batch_size)
+                tbl = load_batches(db, table_name, data_path, S3_Client, model, batch_size)
             else:
-                tbl = load_df(db, table_name, data_path, model, minio_client)
+                tbl = load_df(db, table_name, data_path, model, S3_Client)
             return VectorDB(db_path, db, tbl, model, data_path)
 
     def count_rows(self) -> int:
@@ -105,9 +105,9 @@ class VectorDB:
         df_hits.drop(columns=["vector"], inplace=True)
         return df_hits
 
-    def search_by_image_path(self, image_path: str, limit: int, minio_client: Optional[MinioClient]) -> pd.DataFrame:
-        if minio_client:
-            image_data = minio_client.get_obj(self.data_path, image_path)
+    def search_by_image_path(self, image_path: str, limit: int, S3_Client: Optional[S3Client]) -> pd.DataFrame:
+        if S3_Client:
+            image_data = S3_Client.get_obj(self.data_path, image_path)
             image = BytesIO(image_data.read())
         else:
             image = os.path.join(self.data_path, image_path)

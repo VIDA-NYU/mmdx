@@ -35,10 +35,10 @@ DB_BATCH_LOAD: bool = str(os.getenv("DB_BATCH_LOAD")).lower() == "true"
 DB_BATCH_SIZE: int = int(os.getenv("DB_BATCH_SIZE", default=16))
 DEFAULT_TABLE_NAME: str = "images"
 DATA_SAMPLE_SIZE: Optional[int] = parse_int(os.getenv("DATA_SAMPLE_SIZE"))
-MINIO_ACCESS_KEY: str = os.getenv("MINIO_ACCESS_KEY", default=None)
-MINIO_SECRET_KEY: str = os.getenv("MINIO_SECRET_KEY", default=None)
-MINIO_ENDPOINT: str = os.getenv("MINIO_ENDPOINT", default=None)
-MINIO_ENDPOINT_URL: str = os.getenv("MINIO_URL_ENDPOINT", default=None)
+ACCESS_KEY: str = os.getenv("ACCESS_KEY", default=None)
+SECRET_KEY: str = os.getenv("SECRET_KEY", default=None)
+ENDPOINT: str = os.getenv("ENDPOINT", default=None)
+ENDPOINT_URL: str = os.getenv("ENDPOINT_URL", default=None)
 DEFAULT_CSV_BUCKET: str = "labeling-csv"
 CSV_FILENAME: str = os.getenv("CSV_FILENAME", default=None)
 

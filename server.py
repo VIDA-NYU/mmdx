@@ -9,12 +9,12 @@ from mmdx.settings import (
     DB_PATH,
     DB_DELETE_EXISTING,
     DB_BATCH_LOAD,
-    MINIO_ACCESS_KEY,
-    MINIO_ENDPOINT,
-    MINIO_SECRET_KEY,
+    ACCESS_KEY,
+    ENDPOINT_URL,
+    SECRET_KEY,
     DATA_SOURCE,
 )
-from mmdx.minio_client import MinioClient
+from mmdx.s3_client import S3Client
 from io import BytesIO
 
 
@@ -41,7 +41,7 @@ def assets(path):
 @app.route("/images/<path:path>")
 def images(path):
     if DATA_SOURCE.upper() == "S3":
-        image_data = minio_client.get_obj(DATA_PATH, path)
+        image_data = S3_Client.get_obj(DATA_PATH, path)
         image_buffer = BytesIO(image_data.read())
         return send_file(
             image_buffer,
@@ -72,7 +72,7 @@ def image_search():
     query: str = request.args.get("q")
     limit: int = request.args.get("limit", 12, type=int)
     hits = db.search_by_image_path(
-        image_path=query, limit=limit, minio_client=minio_client
+        image_path=query, limit=limit, S3_Client=S3_Client
     )
     return {"total": len(hits.index), "hits": hits.to_dict("records")}
 
@@ -117,14 +117,14 @@ def download_binary_labeled_data():
     return send_file(output_zip_file, as_attachment=True)
 
 
-def create_db_for_data_path(minio_client):
+def create_db_for_data_path(S3_Client):
     data_path = DATA_PATH
     db_path = DB_PATH
 
     if DATA_SOURCE.upper() == "S3":
         data_path_msg = f" - Data Bucket: {data_path}"
     else:
-        minio_client = None
+        S3_Client = None
         data_path_msg = f" - Raw data path: {os.path.abspath(data_path)}"
 
     print("Loading embedding model...")
@@ -138,7 +138,7 @@ def create_db_for_data_path(minio_client):
     vectordb = VectorDB.from_data_path(
         data_path,
         db_path,
-        minio_client,
+        S3_Client,
         model,
         delete_existing=DB_DELETE_EXISTING,
         batch_load=DB_BATCH_LOAD,
@@ -148,16 +148,16 @@ def create_db_for_data_path(minio_client):
 
 
 if DATA_SOURCE.upper() == "S3":
-    minio_client = MinioClient(
-        access_key=MINIO_ACCESS_KEY,
-        secret_access_key=MINIO_SECRET_KEY,
-        minio_endpoint=MINIO_ENDPOINT,
+    S3_Client = S3Client(
+        access_key=ACCESS_KEY,
+        secret_key=SECRET_KEY,
+        endpoint_url=ENDPOINT_URL,
     )
 else:
-    minio_client=None
+    S3_Client=None
 
 
-db: VectorDB = create_db_for_data_path(minio_client)
+db: VectorDB = create_db_for_data_path(S3_Client)
 
 if __name__ == "__main__":
     if os.environ.get("ENV") == "prod":
