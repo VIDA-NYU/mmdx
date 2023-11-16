@@ -74,7 +74,7 @@
       console.log("onChangeLabel", newLabel);
       addLabel(newLabel);
     } else {
-      console.log("undefined label: ", newLabel);
+      // console.log("undefined label: ", newLabel);
     }
   }
 </script>

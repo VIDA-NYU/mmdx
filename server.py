@@ -62,18 +62,18 @@ def random_search():
 @app.route("/api/v1/keyword_search")
 def keyword_search():
     query: str = request.args.get("q")
+    exclude_labeled: bool = request.args.get("exclude_labeled", "false") == "true"
     limit: int = request.args.get("limit", 12, type=int)
-    hits = db.search_by_text(query_string=query, limit=limit)
+    hits = db.search_by_text(query_string=query, limit=limit, exclude_labeled=exclude_labeled)
     return {"total": len(hits.index), "hits": hits.to_dict("records")}
 
 
 @app.route("/api/v1/image_search")
 def image_search():
     query: str = request.args.get("q")
+    exclude_labeled: bool = request.args.get("exclude_labeled", "false") == "true"
     limit: int = request.args.get("limit", 12, type=int)
-    hits = db.search_by_image_path(
-        image_path=query, limit=limit, minio_client=minio_client
-    )
+    hits = db.search_by_image_path(image_path=query, limit=limit, exclude_labeled=exclude_labeled)
     return {"total": len(hits.index), "hits": hits.to_dict("records")}
 
 

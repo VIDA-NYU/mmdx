@@ -11,9 +11,10 @@ export interface Hit {
     labels?: string[];
 }
 
-export async function keywordSearch(queryStr: string, limit: number): Promise<Hits> {
+export async function keywordSearch(queryStr: string, limit: number, excludeLabeled: boolean): Promise<Hits> {
     const response = await fetchJSON<Hits>("/keyword_search", {
         "q": queryStr,
+        "exclude_labeled": excludeLabeled,
         limit: limit.toString(),
     }).catch((e) => {
         throw new Error("Failed to retrieve keyword search results.", { cause: e })
@@ -21,9 +22,10 @@ export async function keywordSearch(queryStr: string, limit: number): Promise<Hi
     return response;
 }
 
-export async function similarSearch(imagePath: string, limit: number): Promise<Hits> {
+export async function similarSearch(imagePath: string, limit: number, excludeLabeled: boolean): Promise<Hits> {
     const response = await fetchJSON<Hits>("/image_search", {
         "q": imagePath,
+        "exclude_labeled": excludeLabeled,
         limit: limit.toString(),
     }).catch((e) => {
         throw new Error("Failed to search for similar images.", { cause: e })

@@ -71,3 +71,8 @@ class LabelsDB:
         for row in cursor.fetchall():
             counts[row[0]] = row[1]
         return counts
+
+    def get_image_paths(self) -> List[str]:
+        _, cursor = get_db_connection(self.db_file)
+        cursor.execute("SELECT DISTINCT image_path FROM labels;")
+        return [row[0] for row in cursor.fetchall()]
