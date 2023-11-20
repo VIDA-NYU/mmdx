@@ -1,14 +1,20 @@
 <script lang="ts">
   import type { Hit } from "./Api";
   import { navigate } from "svelte-routing";
-  import { labelStore } from "./stores";
+  import { labelStore, animalStore } from "./stores";
   import AutoComplete from "simple-svelte-autocomplete";
   import * as api from "./Api";
 
   export let hit: Hit;
 
   let allLabels: string[];
+  let allAnimals: string[];
   let selectedLabel: string;
+  let selectedAnimal: string;
+  let listings = [
+		{id: 0, name: "CITES"},
+		{id: 1, name: "IUCN"}
+	]
 
   // $: hitLabels = hit.labels?.filter((l) => l); // filter undefined labels
   $: hitLabels = hit.labels;
@@ -31,6 +37,10 @@
     allLabels = storeLabels;
   });
 
+  animalStore.subscribe((storeAnimals) => {
+    allAnimals = storeAnimals;
+  });
+
   function addLabel(newLabel: string) {
     if (!newLabel || newLabel === "") {
       return;
@@ -40,12 +50,12 @@
       if (hitLabels.includes(newLabel)) {
         return;
       }
-      if (newLabel === "relevant" && hitLabels.includes("irrelevant")) {
-        api.removeLabel(hit.image_path, "irrelevant");
-        hitLabels = hitLabels.filter((l) => l !== "irrelevant");
-      } else if (newLabel === "irrelevant" && hitLabels.includes("relevant")) {
-        api.removeLabel(hit.image_path, "relevant");
-        hitLabels = hitLabels.filter((l) => l !== "relevant");
+      if (newLabel === "animal origin" && hitLabels.includes("not animal origin")) {
+        api.removeLabel(hit.image_path, "not animal origin");
+        hitLabels = hitLabels.filter((l) => l !== "not animal origin");
+      } else if (newLabel === "not animal origin" && hitLabels.includes("animal origin")) {
+        api.removeLabel(hit.image_path, "animal origin");
+        hitLabels = hitLabels.filter((l) => l !== "animal origin");
       }
       hitLabels = [...new Set([...hitLabels, newLabel])];
     } else {
@@ -58,6 +68,54 @@
       console.log(e);
     }
   }
+
+  function addAnimal(newAnimal: string) {
+    if (!newAnimal || newAnimal === "") {
+      return;
+    }
+    let hitLabels = hit.labels;
+    if (hitLabels && hitLabels.length > 0) {
+      const animalInLabels = hitLabels.find(animal => allAnimals.includes(animal));
+      if (animalInLabels){
+        api.removeLabel(hit.image_path, animalInLabels);
+        hitLabels = hitLabels.filter((l) => l !== animalInLabels);
+      }
+      hitLabels = [...new Set([...hitLabels, newAnimal])];
+    } else {
+      hitLabels = [newAnimal]
+    }
+    hit.labels = hitLabels;
+    try {
+      api.addLabel(hit.image_path, newAnimal);
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
+  function addOrRemoveListing(newListing: string) {
+    if (!newListing || newListing === "") {
+      return;
+    }
+    let hitLabels = hit.labels;
+    if (hitLabels && hitLabels.length > 0) {
+      if (hitLabels.includes(newListing)) {
+        api.removeLabel(hit.image_path, newListing);
+        hitLabels = hitLabels.filter((l) => l !== newListing);
+      } else{
+        hitLabels = [...new Set([...hitLabels, newListing])];
+      }
+    } else {
+      hitLabels = [newListing]
+    }
+    hit.labels = hitLabels;
+    try {
+      api.addLabel(hit.image_path, newListing);
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
+
 
   function handleCreateLabel(newLabel: string) {
     console.log(hit);
@@ -77,6 +135,36 @@
       console.log("undefined label: ", newLabel);
     }
   }
+
+  function handleCreateAnimal(newAnimal: string) {
+    console.log(hit);
+
+    animalStore.update((storeAnimals) => {
+      return [...new Set([...storeAnimals, newAnimal])];
+    });
+    addAnimal(newAnimal);
+    return newAnimal; // return the new label to the autocomplete
+  }
+
+  function onChangeAnimal(newAnimal: string) {
+    if (newAnimal) {
+      console.log("onChangeAnimal", newAnimal);
+      addAnimal(newAnimal);
+    } else {
+      console.log("undefined label: ", newAnimal);
+    }
+  }
+
+  function handleCheckListing(listings: any) {
+    const selectedListing = listings.name;
+    if (selectedListing) {
+      console.log("onCheckListing", selectedListing);
+      addOrRemoveListing(selectedListing);
+    } else {
+      console.log("undefined check: ", selectedListing);
+    }
+  }
+
 </script>
 
 <div class="card me-3 mb-3">
@@ -94,13 +182,13 @@
       <div class="btn-group me-2" role="group" aria-label="">
         <button
           class="btn btn-sm btn-success"
-          on:click={() => addLabel("relevant")}
+          on:click={() => addLabel("animal origin")}
         >
           <i class="fa fa-thumbs-up" aria-hidden="true" />
         </button>
         <button
           class="btn btn-sm btn-warning"
-          on:click={() => addLabel("irrelevant")}
+          on:click={() => addLabel("not animal origin")}
         >
           <i class="fa fa-thumbs-down" aria-hidden="true" />
         </button>
@@ -109,17 +197,50 @@
         <AutoComplete
           debug={false}
           inputClassName="form-control"
-          items={allLabels}
-          bind:selectedItem={selectedLabel}
-          create={true}
-          onChange={onChangeLabel}
-          onCreate={handleCreateLabel}
+          items={allAnimals}
+          bind:selectedItem={selectedAnimal}
+          create={false}
+          onChange={onChangeAnimal}
+          onCreate={handleCreateAnimal}
+          placeholder="Animal"
         />
         <!-- <button class="btn btn-sm btn-primary">
           <span class="fa fa-plus" />
         </button> -->
       </div>
-    </div>
+        <div class="box-container">
+          <div class="btn-group me-2" role="group" aria-label="">
+            <AutoComplete
+              debug={false}
+              inputClassName="form-control"
+              items={allLabels}
+              bind:selectedItem={selectedLabel}
+              create={false}
+              onChange={onChangeLabel}
+              onCreate={handleCreateLabel}
+              placeholder="Description"
+            />
+          </div>
+        </div>
+        {#each listings as listing}
+        <div class=box-container>
+          <div
+              class="btn-group btn-group-toggle btn-group-sm"
+              data-toggle="buttons"
+            >
+              <label class="btn btn-sm btn-outline-primary"  style="font-size: 0.7em">
+                <input
+                  class="form-check-input"
+                  id={listing.id}
+                  type="checkbox"
+                  value={listing}
+                  autocomplete="off"
+                  on:change={() => {handleCheckListing(listing)}}
+                /> {listing.name}
+              </label>
+          </div>
+        </div>
+        {/each}
     {#if hitLabels && hitLabels.length > 0}
       <div class="btn-toolbar">
         {#each hitLabels as label, idx}
@@ -130,6 +251,7 @@
         {/each}
       </div>
     {/if}
+    </div>
     <div class="btn-toolbar mt-2">
       <button
         class="btn btn-sm btn-info"
@@ -138,8 +260,8 @@
         <i class="fa fa-search" aria-hidden="true" />
         Find Similar
       </button>
+      </div>
     </div>
-  </div>
 </div>
 
 <style>

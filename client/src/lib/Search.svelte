@@ -4,12 +4,13 @@
   import { keywordSearch } from "./Api";
   import ImageCard from "./ImageCard.svelte";
 
-  const limit = 4 * 3;
+  let limit: string = "16";
+  let excludeLabeled: boolean = false;
   let queryStr = "";
   let result: Promise<Hits> | null = null;
 
   function onQuerySubmit() {
-    result = keywordSearch(queryStr, limit);
+    result = keywordSearch(queryStr, +limit, excludeLabeled);
   }
 
   function clearSearch() {
@@ -19,27 +20,60 @@
 </script>
 
 <div class="container">
-  <div class="py-5">
-    <SearchForm
-      bind:value={queryStr}
-      on:submit={onQuerySubmit}
-      autofocus={true}
-      class="form-control"
-      hideLabel={true}
-      label="Image search:"
-      placeholder="Search..."
-    />
+  <div class="py-4">
+    <div class="row">
+      <SearchForm
+        bind:value={queryStr}
+        on:submit={onQuerySubmit}
+        autofocus={true}
+        class="form-control"
+        hideLabel={true}
+        label="Image search:"
+        placeholder="Search..."
+      />
+    </div>
 
-    {#await result}
-      <div class="mt-2 mb-3">
-        <span>
-          <i class="fa fa-spinner fa-spin" aria-hidden="true" />
-          Loading...
-        </span>
+    <div class="row mt-2 mb-2 gx-2 align-items-center">
+      <div class="col-auto">
+        <label class="col-form-label" for="limitSelect">
+          Number of results:
+        </label>
       </div>
-    {:then result}
-      {#if result}
-        <div class="mt-2 mb-3">
+      <div class="col-auto me-3">
+        <select
+          class="form-select form-select-sm"
+          id="limitSelect"
+          bind:value={limit}
+          on:change={onQuerySubmit}
+        >
+          <option value="4">4</option>
+          <option value="8">8</option>
+          <option value="16">16</option>
+          <option value="32">32</option>
+          <option value="64">64</option>
+        </select>
+      </div>
+      <div class="col-auto form-check">
+        <input
+          class="form-check-input"
+          type="checkbox"
+          id="excludeLabeledCheck"
+          bind:checked={excludeLabeled}
+          on:change={onQuerySubmit}
+        />
+        <label class="form-check-label" for="excludeLabeledCheck">
+          Exclude labeled
+        </label>
+      </div>
+      {#await result}
+        <div class="col-auto">
+          <span>
+            <i class="fa fa-spinner fa-spin" aria-hidden="true" />
+            Loading...
+          </span>
+        </div>
+      {:then result}
+        <div class="col-auto">
           {#if queryStr}
             <button
               class="btn btn-secondary btn-sm me-1"
@@ -48,12 +82,22 @@
               <span class="fa fa-close" aria-label="Close" /> Clear
             </button>
           {/if}
-          <span>
-            Showing {result.hits.length} out of {result.total} results for query
-            "{queryStr}".
-          </span>
         </div>
-        <div class="d-flex flex-wrap">
+        {#if result}
+          <div class="col-auto">
+            <span class="form-text">
+              Showing {result.hits.length} results for query "{queryStr}".
+            </span>
+          </div>
+        {/if}
+      {/await}
+    </div>
+
+    {#await result}
+      <!-- Awaiting state is already handled above -->
+    {:then result}
+      {#if result}
+        <div class="d-flex flex-wrap mt-2 mb-2">
           {#each result.hits as hit}
             <div class="w-25">
               <ImageCard {hit} />

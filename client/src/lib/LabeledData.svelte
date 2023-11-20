@@ -14,7 +14,7 @@
 </script>
 
 <div class="container">
-  <div class="py-5">
+  <div class="py-4">
     <h1>Statistics</h1>
     {#await result}
       <div class="mt-2 mb-3">

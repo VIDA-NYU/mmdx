@@ -13,10 +13,10 @@ from mmdx.settings import (
     ENDPOINT_URL,
     SECRET_KEY,
     DATA_SOURCE,
+    LOAD_DATA,
 )
 from mmdx.s3_client import S3Client
 from io import BytesIO
-
 
 app = Flask(__name__)
 
@@ -113,10 +113,33 @@ def download_binary_labeled_data():
     current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     filename = f"binary_labeled_data_{current_time}.zip"
     output_zip_file = db.create_zip_labeled_binary_data(
-        output_dir=os.path.join(DB_PATH, "downloads"), filename=filename
+        output_dir=os.path.join(DB_PATH, "downloads"),
+        filename=filename,
+        s3_client=S3Client
     )
     print("Created zip file: ", output_zip_file)
     return send_file(output_zip_file, as_attachment=True)
+
+@app.route("/api/v1/load/csv_data", methods=['POST'])
+def create_database():
+    try:
+        if 'file' not in request.files:
+            return {'error': 'No file part'}
+        file = request.files['file']
+        print(file)
+
+        if file.filename == '':
+            return {'error': 'No selected file'}
+
+        filename = file.filename
+        filepath = os.path.join(filename)
+        file.save(filepath)
+        os.environ['CSV_PATH'] = filepath
+        global db
+        db = create_db_for_data_path(S3_Client)
+        return {'message': 'CSV data received and processed successfully'}
+    except Exception as e:
+        return {'error': str(e)}
 
 
 def create_db_for_data_path(S3_Client):
@@ -158,8 +181,10 @@ if DATA_SOURCE.upper() == "S3":
 else:
     S3_Client=None
 
-
-db: VectorDB = create_db_for_data_path(S3_Client)
+if LOAD_DATA:
+    db: VectorDB = None
+else:
+    db: VectorDB = create_db_for_data_path(S3_Client)
 
 if __name__ == "__main__":
     if os.environ.get("ENV") == "prod":

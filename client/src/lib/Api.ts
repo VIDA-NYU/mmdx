@@ -12,9 +12,10 @@ export interface Hit {
     labels?: string[];
 }
 
-export async function keywordSearch(queryStr: string, limit: number): Promise<Hits> {
+export async function keywordSearch(queryStr: string, limit: number, excludeLabeled: boolean): Promise<Hits> {
     const response = await fetchJSON<Hits>("/keyword_search", {
         "q": queryStr,
+        "exclude_labeled": excludeLabeled,
         limit: limit.toString(),
     }).catch((e) => {
         throw new Error("Failed to retrieve keyword search results.", { cause: e })
@@ -22,9 +23,10 @@ export async function keywordSearch(queryStr: string, limit: number): Promise<Hi
     return response;
 }
 
-export async function similarSearch(imagePath: string, limit: number): Promise<Hits> {
+export async function similarSearch(imagePath: string, limit: number, excludeLabeled: boolean): Promise<Hits> {
     const response = await fetchJSON<Hits>("/image_search", {
         "q": imagePath,
+        "exclude_labeled": excludeLabeled,
         limit: limit.toString(),
     }).catch((e) => {
         throw new Error("Failed to search for similar images.", { cause: e })
@@ -66,6 +68,16 @@ export async function addLabel(image_path: string, label: string): Promise<AddLa
     return response;
 }
 
+export async function addAnimal(image_path: string, label: string): Promise<AddLabelResponse> {
+    const response = await fetchJSON<AddLabelResponse>("/add_label", {
+        image_path,
+        label
+    }).catch((e) => {
+        throw new Error("Failed to save label.", { cause: e })
+    });
+    return response;
+}
+
 interface RemoveLabelResponse {
     success: boolean;
 }
@@ -88,6 +100,41 @@ export function downloadFile() {
     link.click();
     document.body.removeChild(link);
 }
+
+export async function loadCSV(csv: any) {
+    const url = `${API_URL}/load/csv_data`;
+    let responseMessage = ''
+
+    try {
+        // Create a Blob with the CSV data and specify the line endings
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        console.log(csv);
+
+        // Create FormData and append the Blob
+        const formData = new FormData();
+        formData.append('file', blob, 'filename.csv');
+
+        // Send the FormData using fetch
+        const response = await fetch(url, {
+            method: 'POST',
+            body: formData,
+        });
+
+      if (response.ok) {
+        const responseData = await response.json();
+        responseMessage = 'CSV data loaded successfully';
+        console.log('CSV data loaded successfully:', responseData);
+      } else {
+        responseMessage = 'Failed to load CSV data';
+        console.error('Failed to load CSV data:', response.statusText);
+      }
+    } catch (error) {
+        responseMessage = 'Error loading CSV data';
+        console.error('Error loading CSV data:', error);
+    }
+    return responseMessage;
+  }
+
 
 
 export interface LabelCountsResponse {

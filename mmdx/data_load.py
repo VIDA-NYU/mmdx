@@ -62,6 +62,11 @@ def get_image_files(data_path: str, S3_Client: S3Client):
         csv_data = S3_Client.get_obj(DEFAULT_CSV_BUCKET, CSV_FILENAME)
         df = pd.read_csv(BytesIO(csv_data.read()))
         image_files = df["image_path"].to_list()
+    elif os.environ.get("CSV_PATH"):
+        csv_path = os.environ.get("CSV_PATH")
+        print("Getting images from CSV upload by user")
+        df = pd.read_csv(csv_path)
+        image_files = df["image_path"].to_list()
     else:
         image_files = S3_Client.list_objects_names(data_path)
         df = None

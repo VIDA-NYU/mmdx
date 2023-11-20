@@ -179,17 +179,23 @@ class VectorDB:
         df_join["labels"] = df_join["labels"].fillna("").apply(list)
         return df_join
 
-    def create_zip_labeled_binary_data(self, output_dir: str, filename: str) -> str:
+    def create_zip_labeled_binary_data(
+            self,
+            output_dir: str,
+            filename: str,
+            s3_client: S3Client) -> str:
         os.makedirs(output_dir, exist_ok=True)
         lance_tbl = self.tbl.to_lance()
         df = duckdb.sql(
-            f"""
-            SELECT lance_tbl.*, grouped_labels.labels FROM lance_tbl
-            INNER JOIN (
-                SELECT image_path, label AS labels FROM sqlite_scan('{self.labelsdb_path}', 'labels') WHERE (label='relevant' OR label='irrelevant')
-            ) AS grouped_labels
-            ON (lance_tbl.image_path = grouped_labels.image_path);
-        """
+            query = f"""
+                SELECT lance_tbl.*, grouped_labels.labels FROM lance_tbl
+                INNER JOIN (
+                    SELECT image_path, GROUP_CONCAT(label, ', ') AS labels
+                    FROM sqlite_scan('{self.labelsdb_path}', 'labels')
+                    GROUP BY image_path
+                ) AS grouped_labels
+                ON (lance_tbl.image_path = grouped_labels.image_path);
+            """
         ).to_df()
         df.drop(columns=["vector"], inplace=True)
 
@@ -198,15 +204,6 @@ class VectorDB:
             csv_path = os.path.join(tmpdir, "data.csv")
             df.to_csv(csv_path, index=False)
 
-            # Copy all image paths to the same temporary folder
-            for image_path in df["image_path"]:
-                src_path = os.path.join(self.data_path, image_path)
-                dst_path = os.path.join(tmpdir, image_path)
-                print("Copying", src_path, "to", dst_path)
-                os.makedirs(os.path.dirname(dst_path), exist_ok=True)
-                shutil.copy(src_path, dst_path)
-
-            # Create a zip file containing all files from the temporary folder
             if output_dir is None:
                 output_dir = tempfile.gettempdir()
             if filename.endswith(".zip"):
