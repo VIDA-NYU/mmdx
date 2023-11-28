@@ -96,51 +96,6 @@ def remove_label():
     db.remove_label(image_path=image_path, label=label, table=table)
     return {"success": True}
 
-# @app.route("/api/v1/add_description")
-# def add_description():
-#     print("adding description ")
-#     image_path: str = request.args.get("image_path", None, type=str)
-#     label: str = request.args.get("description", None, type=str)
-#     db.add_description(image_path=image_path, description=label)
-#     return {"success": True}
-
-
-# @app.route("/api/v1/remove_description")
-# def remove_description():
-#     image_path: str = request.args.get("image_path", None, type=str)
-#     label: str = request.args.get("description", None, type=str)
-#     db.remove_description(image_path=image_path, description=label)
-#     return {"success": True}
-
-# @app.route("/api/v1/add_animal")
-# def add_animal():
-#     image_path: str = request.args.get("image_path", None, type=str)
-#     label: str = request.args.get("animal", None, type=str)
-#     db.add_animal(image_path=image_path, animal=label)
-#     return {"success": True}
-
-
-# @app.route("/api/v1/remove_animal")
-# def remove_animal():
-#     image_path: str = request.args.get("image_path", None, type=str)
-#     label: str = request.args.get("animal", None, type=str)
-#     db.remove_animal(image_path=image_path, animal=label)
-#     return {"success": True}
-
-# @app.route("/api/v1/add_listing")
-# def add_listing():
-#     image_path: str = request.args.get("image_path", None, type=str)
-#     label: str = request.args.get("listing", None, type=str)
-#     db.add_listing(image_path=image_path, listing=label)
-#     return {"success": True}
-
-
-# @app.route("/api/v1/remove_listing")
-# def remove_listing():
-#     image_path: str = request.args.get("image_path", None, type=str)
-#     label: str = request.args.get("listing", None, type=str)
-#     db.remove_listing(image_path=image_path, listing=label)
-#     return {"success": True}
 
 @app.route("/api/v1/labels")
 def labels():
@@ -166,6 +121,7 @@ def download_binary_labeled_data():
     print("Created zip file: ", output_zip_file)
     return send_file(output_zip_file, as_attachment=True)
 
+
 @app.route("/api/v1/load/csv_data", methods=['POST'])
 def create_database():
     # try:
@@ -184,9 +140,6 @@ def create_database():
     global db
     db = create_db_for_data_path(S3_Client)
     return {'message': 'CSV data received and processed successfully'}
-    # except Exception as e:
-    #     print(f'error: {e}')
-    #     return {'error': str(e)}
 
 
 def create_db_for_data_path(S3_Client):

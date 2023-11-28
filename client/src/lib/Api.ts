@@ -13,8 +13,9 @@ export interface Hit {
     labels?: string[];
     animal?: string;
     description?: string[];
-    listing?: string;
+    metadata?: string;
 }
+
 
 export async function keywordSearch(queryStr: string, limit: number, excludeLabeled: boolean): Promise<Hits> {
     const response = await fetchJSON<Hits>("/keyword_search", {

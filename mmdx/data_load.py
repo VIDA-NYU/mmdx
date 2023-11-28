@@ -173,6 +173,7 @@ def make_df(
     titles = []
     image_paths = []
     vectors = []
+    metadatas = []
     for image_path in tqdm.tqdm(image_files):
         image_path, embedding = embed_image_files(
             model, data_path, [image_path], S3_Client
@@ -180,11 +181,14 @@ def make_df(
         if embedding is not None:
             vectors.append(embedding)
             image_paths.append(image_path)
+            print(df.columns)
             titles.append(df.loc[df["image_path"] == image_path, "title"].values[0])
+            metadatas.append(df.loc[df["image_path"] == image_path, "metadata"].values[0])
 
     df = pd.DataFrame(
         {
             "title": titles,
+            "metadata": metadatas,
             "image_path": image_paths,
             "vector": vectors,
         }

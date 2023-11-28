@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Modal from './Modal.svelte';
   import type { Hit } from "./Api";
   import { navigate } from "svelte-routing";
   import { labelStore, animalStore } from "./stores";
@@ -6,6 +7,8 @@
   import * as api from "./Api";
 
   export let hit: Hit;
+
+  let showModal = false;
 
   let allLabels: string[];
   let allAnimals: string[];
@@ -221,6 +224,7 @@
     <p class="card-text mb-2">
       {hit.title ? hit.title : hit.image_path}
     </p>
+    <button class="btn btn-sm btn-info" on:click={() => (showModal = true)}>Metadata</button>
     <div class="btn-toolbar mt-1">
       <div class="btn-group me-2" role="group" aria-label="">
         <button
@@ -305,6 +309,20 @@
     </div>
 </div>
 
+<Modal bind:showModal>
+	<h2 slot="header">
+		metadata
+	</h2>
+
+	<ol class="definition-list">
+    Title:
+    {hit.title ? hit.title : hit.image_path}
+    Metadata:
+    {hit.metadata}
+	</ol>
+</Modal>
+
+
 <style>
   :global(.autocomplete-list) {
     --bs-dropdown-zindex: 1000;
@@ -372,4 +390,8 @@
     /* width: 207px !important; */
     width: 171px !important;
   }
+  h1 {
+		font-size: 1rem;
+		text-align: center;
+	}
 </style>
