@@ -9,15 +9,10 @@
 
   let allLabels: string[];
   let allAnimals: string[];
-  let selectedLabel: string;
+  let selectedDescription: string;
   let selectedAnimal: string;
-  let listings = [
-		{id: 0, name: "CITES"},
-		{id: 1, name: "IUCN"}
-	]
-
-  // $: hitLabels = hit.labels?.filter((l) => l); // filter undefined labels
   $: hitLabels = hit.labels;
+
 
   // tableau10 colors
   const colors = [
@@ -41,110 +36,158 @@
     allAnimals = storeAnimals;
   });
 
+
   function addLabel(newLabel: string) {
     if (!newLabel || newLabel === "") {
       return;
     }
     let hitLabels = hit.labels;
-    if (hitLabels && hitLabels.length > 0) {
-      if (hitLabels.includes(newLabel)) {
+    let hitRelevants = hit.relevant;
+    console.log(hitRelevants)
+    console.log(hitLabels)
+    if (hitRelevants && hitRelevants.length > 0) {
+      if (hitRelevants.includes(newLabel)) {
         return;
       }
-      if (newLabel === "animal origin" && hitLabels.includes("not animal origin")) {
-        api.removeLabel(hit.image_path, "not animal origin");
+      if (newLabel === "animal origin" && hitRelevants.includes("not animal origin")) {
+        api.removeLabel(hit.image_path, "not animal origin", "relevant");
         hitLabels = hitLabels.filter((l) => l !== "not animal origin");
+        hitRelevants = hitRelevants.filter((l) => l !== "not animal origin");
       } else if (newLabel === "not animal origin" && hitLabels.includes("animal origin")) {
-        api.removeLabel(hit.image_path, "animal origin");
+        api.removeLabel(hit.image_path, "animal origin", "relevant");
         hitLabels = hitLabels.filter((l) => l !== "animal origin");
+        hitRelevants = hitRelevants.filter((l) => l !== "animal origin");
       }
       hitLabels = [...new Set([...hitLabels, newLabel])];
+      hitRelevants = [...new Set([...hitRelevants, newLabel])];
     } else {
       hitLabels = [newLabel];
+      hitRelevants = [newLabel];
     }
     hit.labels = hitLabels;
+    hit.relevant = hitRelevants;
     try {
-      api.addLabel(hit.image_path, newLabel);
+      api.addLabel(hit.image_path, newLabel, "relevant");
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
+  function addDescription(newDescription: string) {
+    if (!newDescription || newDescription === "") {
+      return;
+    }
+    let hitDescription = hit.description;
+    let hitLabels = hit.labels;
+    console.log("start", hitLabels)
+    if (hitDescription && hitDescription.length > 0) {
+      if (hitDescription.includes(newDescription)) {
+        return;
+      }else{
+        hitDescription = [...new Set([...hitDescription, newDescription])];
+        hitLabels = [...new Set([...hitLabels, newDescription])];
+        console.log("add", hitLabels)
+      }
+    } else {
+      hitDescription = [newDescription];
+      hitLabels = [...new Set([...hitLabels, newDescription])];
+    }
+    hit.description = hitDescription;
+    hit.labels = hitLabels;
+    console.log("end", hitLabels)
+    try {
+      api.addLabel(hit.image_path, newDescription, "description");
     } catch (e) {
       console.log(e);
     }
   }
 
   function addAnimal(newAnimal: string) {
+
     if (!newAnimal || newAnimal === "") {
       return;
     }
     let hitLabels = hit.labels;
-    if (hitLabels && hitLabels.length > 0) {
-      const animalInLabels = hitLabels.find(animal => allAnimals.includes(animal));
-      if (animalInLabels){
-        api.removeLabel(hit.image_path, animalInLabels);
-        hitLabels = hitLabels.filter((l) => l !== animalInLabels);
-      }
-      hitLabels = [...new Set([...hitLabels, newAnimal])];
-    } else {
-      hitLabels = [newAnimal]
+    let hitAnimal = hit.animal;
+    if (hitAnimal && hitAnimal !== newAnimal) {
+      api.removeLabel(hit.image_path, hitAnimal, "animal");
     }
-    hit.labels = hitLabels;
+
+    if (hitLabels && hitLabels.length >0){
+        if (hitAnimal && hitLabels.includes(hitAnimal)){
+          api.removeLabel(hit.image_path, hitAnimal, "labels");
+          hitLabels = hitLabels.filter((l) => l !== hitAnimal);
+          hitLabels = [...new Set([...hitLabels, newAnimal])];
+        } else{
+          hitLabels = [...new Set([...hitLabels, newAnimal])];
+        }
+    }else {
+      hit.labels = [newAnimal];
+      hitLabels = hit.labels;
+    }
+    hit.labels = hitLabels
+    hitAnimal = newAnimal;
+    hit.animal = hitAnimal;
+
     try {
-      api.addLabel(hit.image_path, newAnimal);
+      api.addLabel(hit.image_path, newAnimal, "animal");
+      api.addLabel(hit.image_path, newAnimal, "labels");
     } catch (e) {
       console.log(e);
     }
   }
 
-  function addOrRemoveListing(newListing: string) {
-    if (!newListing || newListing === "") {
-      return;
-    }
-    let hitLabels = hit.labels;
-    if (hitLabels && hitLabels.length > 0) {
-      if (hitLabels.includes(newListing)) {
-        api.removeLabel(hit.image_path, newListing);
-        hitLabels = hitLabels.filter((l) => l !== newListing);
-      } else{
-        hitLabels = [...new Set([...hitLabels, newListing])];
-      }
-    } else {
-      hitLabels = [newListing]
-    }
-    hit.labels = hitLabels;
-    try {
-      api.addLabel(hit.image_path, newListing);
-    } catch (e) {
-      console.log(e);
-    }
-  }
+  // function addOrRemoveListing(newListing: string) {
+  //   if (!newListing || newListing === "") {
+  //     return;
+  //   }
+  //   let hitLabels = hit.labels;
+  //   if (hitLabels && hitLabels.length > 0) {
+  //     if (hitLabels.includes(newListing)) {
+  //       api.removeLabel(hit.image_path, newListing);
+  //       hitLabels = hitLabels.filter((l) => l !== newListing);
+  //     } else{
+  //       hitLabels = [...new Set([...hitLabels, newListing])];
+  //     }
+  //   } else {
+  //     hitLabels = [newListing]
+  //   }
+  //   hit.labels = hitLabels;
+  //   try {
+  //     api.addListing(hit.image_path, newListing);
+  //   } catch (e) {
+  //     console.log(e);
+  //   }
+  // }
 
+  // function handleCreateDescription(newLabel: string) {
+  //   console.log(hit);
 
+  //   labelStore.update((storeLabels) => {
+  //     return [...new Set([...storeLabels, newLabel])];
+  //   });
+  //   addDescription(newLabel);
+  //   return newLabel; // return the new label to the autocomplete
+  // }
 
-  function handleCreateLabel(newLabel: string) {
-    console.log(hit);
-
-    labelStore.update((storeLabels) => {
-      return [...new Set([...storeLabels, newLabel])];
-    });
-    addLabel(newLabel);
-    return newLabel; // return the new label to the autocomplete
-  }
-
-  function onChangeLabel(newLabel: string) {
+  function onChangeDescription(newLabel: string) {
     if (newLabel) {
-      console.log("onChangeLabel", newLabel);
-      addLabel(newLabel);
+      console.log("onChangeDescription", newLabel);
+      addDescription(newLabel);
     } else {
-      console.log("undefined label: ", newLabel);
+      console.log("undefined Description: ", newLabel);
     }
   }
 
-  function handleCreateAnimal(newAnimal: string) {
-    console.log(hit);
+  // function handleCreateAnimal(newAnimal: string) {
+  //   console.log(hit);
 
-    animalStore.update((storeAnimals) => {
-      return [...new Set([...storeAnimals, newAnimal])];
-    });
-    addAnimal(newAnimal);
-    return newAnimal; // return the new label to the autocomplete
-  }
+  //   animalStore.update((storeAnimals) => {
+  //     return [...new Set([...storeAnimals, newAnimal])];
+  //   });
+  //   addAnimal(newAnimal);
+  //   return newAnimal; // return the new label to the autocomplete
+  // }
 
   function onChangeAnimal(newAnimal: string) {
     if (newAnimal) {
@@ -155,15 +198,15 @@
     }
   }
 
-  function handleCheckListing(listings: any) {
-    const selectedListing = listings.name;
-    if (selectedListing) {
-      console.log("onCheckListing", selectedListing);
-      addOrRemoveListing(selectedListing);
-    } else {
-      console.log("undefined check: ", selectedListing);
-    }
-  }
+  // function handleCheckListing(listings: any) {
+  //   const selectedListing = listings.name;
+  //   if (selectedListing) {
+  //     console.log("onCheckListing", selectedListing);
+  //     addOrRemoveListing(selectedListing);
+  //   } else {
+  //     console.log("undefined check: ", selectedListing);
+  //   }
+  // }
 
 </script>
 
@@ -201,7 +244,6 @@
           bind:selectedItem={selectedAnimal}
           create={false}
           onChange={onChangeAnimal}
-          onCreate={handleCreateAnimal}
           placeholder="Animal"
         />
         <!-- <button class="btn btn-sm btn-primary">
@@ -214,15 +256,14 @@
               debug={false}
               inputClassName="form-control"
               items={allLabels}
-              bind:selectedItem={selectedLabel}
+              bind:selectedItem={selectedDescription}
               create={false}
-              onChange={onChangeLabel}
-              onCreate={handleCreateLabel}
+              onChange={onChangeDescription}
               placeholder="Description"
             />
           </div>
         </div>
-        {#each listings as listing}
+        <!-- {#each listings as listing}
         <div class=box-container>
           <div
               class="btn-group btn-group-toggle btn-group-sm"
@@ -240,7 +281,7 @@
               </label>
           </div>
         </div>
-        {/each}
+        {/each} -->
     {#if hitLabels && hitLabels.length > 0}
       <div class="btn-toolbar">
         {#each hitLabels as label, idx}

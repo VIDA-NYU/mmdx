@@ -77,11 +77,31 @@ class VectorDB:
             f"SELECT * FROM lance_tbl WHERE image_path='{image_path}';"
         ).to_df()
 
-    def add_label(self, image_path: str, label: str):
-        self.labelsdb.add(image_path=image_path, label=label)
+    def add_label(self, image_path: str, label: str, table: str):
+        self.labelsdb.add(image_path=image_path, label=label, table=table)
 
-    def remove_label(self, image_path: str, label: str):
-        self.labelsdb.remove(image_path=image_path, label=label)
+    def remove_label(self, image_path: str, label: str, table: str):
+        self.labelsdb.remove_records(image_path=image_path, label=label, table=table)
+
+    # def add_description(self, image_path: str, description: str):
+    #     self.labelsdb.add(image_path=image_path, description=description)
+
+    # def remove_description(self, image_path: str, description: str):
+    #     self.labelsdb.remove_records(image_path=image_path, description=description)
+
+    # def add_animal(self, image_path: str, animal: str):
+    #     print("adding animal")
+    #     self.labelsdb.add(image_path=image_path, animal=animal)
+
+    # def remove_animal(self, image_path: str, animal: str):
+    #     self.labelsdb.remove_records(image_path=image_path, animal=animal)
+
+    # def add_listing(self, image_path: str, listing: str):
+    #     print("adding listing")
+    #     self.labelsdb.add(image_path=image_path, listing=listing)
+
+    # def remove_listing(self, image_path: str, listing: str):
+    #     self.labelsdb.remove_records(image_path=image_path, listing=listing)
 
     def get_labels(self, image_path: Optional[str] = None) -> List[str]:
         return self.labelsdb.get(image_path=image_path)
@@ -182,23 +202,11 @@ class VectorDB:
     def create_zip_labeled_binary_data(
             self,
             output_dir: str,
-            filename: str,
-            s3_client: S3Client) -> str:
+            filename: str) -> str:
+        result = self.labelsdb.create_zip_labeled_data(output_dir, filename)
         os.makedirs(output_dir, exist_ok=True)
-        lance_tbl = self.tbl.to_lance()
-        df = duckdb.sql(
-            query = f"""
-                SELECT lance_tbl.*, grouped_labels.labels FROM lance_tbl
-                INNER JOIN (
-                    SELECT image_path, GROUP_CONCAT(label, ', ') AS labels
-                    FROM sqlite_scan('{self.labelsdb_path}', 'labels')
-                    GROUP BY image_path
-                ) AS grouped_labels
-                ON (lance_tbl.image_path = grouped_labels.image_path);
-            """
-        ).to_df()
-        df.drop(columns=["vector"], inplace=True)
-
+        columns = ["image_path", "animal", "description", "relevant"]
+        df = pd.DataFrame(result, columns=columns)
         # Save df_hits to a CSV file in a temporary folder
         with tempfile.TemporaryDirectory() as tmpdir:
             csv_path = os.path.join(tmpdir, "data.csv")
@@ -213,3 +221,64 @@ class VectorDB:
             shutil.make_archive(zip_path[:-4], "zip", tmpdir)
 
             return zip_path
+
+
+        # lance_tbl = self.tbl.to_lance()
+
+        # df = duckdb.sql(
+        #     # query = f"""
+        #     #     SELECT
+        #     #         lance_tbl.*,
+        #     #         grouped_labels.labels,
+        #     #         grouped_labels.description,
+        #     #         grouped_labels.animal,
+        #     #         grouped_labels.listing
+        #     #     FROM
+        #     #         lance_tbl
+        #     #     INNER JOIN (
+        #     #         SELECT
+        #     #             image_path,
+        #     #             GROUP_CONCAT(label, ', ') AS labels,
+        #     #             GROUP_CONCAT(description, ', ') AS description,
+        #     #             GROUP_CONCAT(listing, ', ') AS listing,
+        #     #             MAX(animal) AS animal
+        #     #         FROM
+        #     #             sqlite_scan('{self.labelsdb_path}', 'labels')
+        #     #         GROUP BY
+        #     #             image_path
+        #     #     ) AS grouped_labels
+        #     #     ON
+        #     #         lance_tbl.image_path = grouped_labels.image_path;
+        #     # """
+        #     query=f"""
+        #         SELECT
+        #             lance_tbl.*,
+        #             animal.* AS animal,
+        #             description.* AS description,
+        #             relevant.* AS relevant
+        #         FROM
+        #             lance_tbl
+        #         LEFT JOIN
+        #             description.label ON lance_tbl.image_path = description.image_path
+        #         LEFT JOIN
+        #             relevant.label ON lance_tbl.image_path = relevant.image_path
+        #         LEFT JOIN
+        #             animal.label ON lance_tbl.image_path = animal.image_path
+        # """
+        # ).to_df()
+        # df.drop(columns=["vector"], inplace=True)
+
+        # # Save df_hits to a CSV file in a temporary folder
+        # with tempfile.TemporaryDirectory() as tmpdir:
+        #     csv_path = os.path.join(tmpdir, "data.csv")
+        #     df.to_csv(csv_path, index=False)
+
+        #     if output_dir is None:
+        #         output_dir = tempfile.gettempdir()
+        #     if filename.endswith(".zip"):
+        #         zip_path = os.path.join(output_dir, filename)
+        #     else:
+        #         zip_path = os.path.join(output_dir, filename + ".zip")
+        #     shutil.make_archive(zip_path[:-4], "zip", tmpdir)
+
+        #     return zip_path
