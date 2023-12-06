@@ -35,12 +35,27 @@
         <a id="alerts" class="ht-anchor">Main Buttons</a>
         <h5 class="mt-4 mb-3">Main Buttons</h5>
 
+
         <div class="row mt-3">
+
           <div class="col">
             <a href="#!" class="btn btn-primary">Default Button</a>
             <a href="#!" class="btn btn-outline-primary">Outline Button</a>
             <a href="#!" class="btn btn-secondary">Default Button</a>
             <a href="#!" class="btn btn-outline-secondary">Outline Button</a>
+            <button type="button" class="btn btn-primary position-relative">
+              Profile
+              <span class="position-absolute top-0 start-100 translate-middle p-2 bg-danger border border-light rounded-circle">
+                <span class="visually-hidden">New alerts</span>
+              </span>
+            </button>
+            <span class="badge rounded-pill bg-secondary me-1 mt-2 ">
+                <!-- style="background-color: {colors[idx]} !important;" -->
+                label
+                <span class="position-absolute top-0 start-100 translate-middle p-2 bg-danger border border-light rounded-circle">
+                  <span class="visually-hidden">Remove label</span>
+                </span>
+              </span>
           </div>
         </div>
 

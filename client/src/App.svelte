@@ -12,14 +12,14 @@
 
   export let url = "";
 
-  onMount(async () => {
-    console.log("Loading labels...");
-    const remoteLabels = await api.loadLabels();
-    labelStore.update((labels: string[]) => [
-      ...new Set([...labels, ...remoteLabels.labels]),
-    ]);
-    console.log("Labels loaded: ", remoteLabels);
-  });
+  // onMount(async () => {
+  //   console.log("Loading labels...");
+  //   const remoteLabels = await api.loadLabels();
+  //   labelStore.update((labels: string[]) => [
+  //     ...new Set([...labels, ...remoteLabels.labels]),
+  //   ]);
+  //   console.log("Labels loaded: ", remoteLabels);
+  // });
 
   function getLinkProps(args: Object): Object {
     const { href, isPartiallyCurrent, isCurrent } = args as {

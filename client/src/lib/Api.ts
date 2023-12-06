@@ -13,6 +13,7 @@ export interface Hit {
     labels?: string[];
     animal?: string;
     description?: string[];
+    keywords?: string[];
     metadata?: string;
 }
 
@@ -135,7 +136,6 @@ export async function loadCSV(csv: any) {
     try {
         // Create a Blob with the CSV data and specify the line endings
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        console.log(csv);
 
         // Create FormData and append the Blob
         const formData = new FormData();

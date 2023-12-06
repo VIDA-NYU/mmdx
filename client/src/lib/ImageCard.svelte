@@ -1,18 +1,26 @@
 <script lang="ts">
+api.
+
   import Modal from './Modal.svelte';
   import type { Hit } from "./Api";
   import { navigate } from "svelte-routing";
-  import { labelStore, animalStore } from "./stores";
+  import { labelStore, animalStore, negativeKeywordStore } from "./stores";
   import AutoComplete from "simple-svelte-autocomplete";
   import * as api from "./Api";
 
   export let hit: Hit;
+  $: parsedHitMetadata = JSON.parse(hit.metadata);
+
+  console.log('hit.metadata', hit.metadata);
+  console.log('parsed', parsedHitMetadata);
 
   let showModal = false;
 
   let allLabels: string[];
   let allAnimals: string[];
+  let allNegKeywords: string[];
   let selectedDescription: string;
+  let selectedNegKeyword: string;
   let selectedAnimal: string;
   $: hitLabels = hit.labels;
 
@@ -39,6 +47,10 @@
     allAnimals = storeAnimals;
   });
 
+  negativeKeywordStore.subscribe((storeNegKeyword) => {
+    allNegKeywords = storeNegKeyword;
+  });
+
 
   function addLabel(newLabel: string) {
     if (!newLabel || newLabel === "") {
@@ -46,8 +58,6 @@
     }
     let hitLabels = hit.labels;
     let hitRelevants = hit.relevant;
-    console.log(hitRelevants)
-    console.log(hitLabels)
     if (hitRelevants && hitRelevants.length > 0) {
       if (hitRelevants.includes(newLabel)) {
         return;
@@ -64,7 +74,7 @@
       hitLabels = [...new Set([...hitLabels, newLabel])];
       hitRelevants = [...new Set([...hitRelevants, newLabel])];
     } else {
-      hitLabels = [newLabel];
+      hitLabels = [...new Set([...hitLabels, newLabel])];
       hitRelevants = [newLabel];
     }
     hit.labels = hitLabels;
@@ -82,14 +92,17 @@
     }
     let hitDescription = hit.description;
     let hitLabels = hit.labels;
-    console.log("start", hitLabels)
     if (hitDescription && hitDescription.length > 0) {
       if (hitDescription.includes(newDescription)) {
-        return;
+        api.removeLabel(hit.image_path, newDescription, "description");
+        hitDescription = hitDescription.filter((l) => l !== newDescription);
+        if (hitLabels && hitLabels.length > 0 && hitLabels.includes(newDescription)){
+          hitLabels = hitLabels.filter((l) => l !== newDescription);
+          api.removeLabel(hit.image_path, newDescription, "labels");
+        }
       }else{
         hitDescription = [...new Set([...hitDescription, newDescription])];
         hitLabels = [...new Set([...hitLabels, newDescription])];
-        console.log("add", hitLabels)
       }
     } else {
       hitDescription = [newDescription];
@@ -97,9 +110,9 @@
     }
     hit.description = hitDescription;
     hit.labels = hitLabels;
-    console.log("end", hitLabels)
     try {
       api.addLabel(hit.image_path, newDescription, "description");
+      api.addLabel(hit.image_path, newDescription, "labels");
     } catch (e) {
       console.log(e);
     }
@@ -140,38 +153,69 @@
     }
   }
 
-  // function addOrRemoveListing(newListing: string) {
-  //   if (!newListing || newListing === "") {
+  // function addKeyword(newKeyword: string) {
+  //   if (!newKeyword || newKeyword === "") {
   //     return;
   //   }
   //   let hitLabels = hit.labels;
-  //   if (hitLabels && hitLabels.length > 0) {
-  //     if (hitLabels.includes(newListing)) {
-  //       api.removeLabel(hit.image_path, newListing);
-  //       hitLabels = hitLabels.filter((l) => l !== newListing);
+  //   let hitNegKeywords = hit.keywords;
+  //   if (hitNegKeywords && hitNegKeywords.length > 0) {
+  //     if (hitNegKeywords.includes(newKeyword)) {
+  //       api.removeLabel(hit.image_path, newKeyword, "keywords");
+  //       hitNegKeywords
+  //       if (hitLabels && hitLabels.length > 0 && hitLabels.includes(newKeyword)){
+  //         api.removeLabel(hit.image_path, newKeyword, "labels");
+  //         hitLabels = hitLabels.filter((l) => l !== newKeyword);
+  //       }
   //     } else{
-  //       hitLabels = [...new Set([...hitLabels, newListing])];
+  //       hitNegKeywords = [...new Set([...hitNegKeywords, newKeyword])];
+  //       api.addLabel(hit.image_path, newKeyword, "keywords");
+  //       if (hitLabels && hitLabels.length > 0 && !hitLabels.includes(newKeyword)){
+  //         hitLabels = [...new Set([...hitLabels, newKeyword])];
+  //         api.addLabel(hit.image_path, newKeyword, "labels");
+  //       }
   //     }
   //   } else {
-  //     hitLabels = [newListing]
+  //     hitLabels = [...new Set([...hitLabels, newKeyword])];
+  //     hitNegKeywords = [newKeyword]
+  //     api.addLabel(hit.image_path, newKeyword, "keywords");
+  //     api.addLabel(hit.image_path, newKeyword, "labels");
   //   }
   //   hit.labels = hitLabels;
-  //   try {
-  //     api.addListing(hit.image_path, newListing);
-  //   } catch (e) {
-  //     console.log(e);
-  //   }
+  //   hit.keywords = hitNegKeywords;
   // }
 
-  // function handleCreateDescription(newLabel: string) {
-  //   console.log(hit);
-
-  //   labelStore.update((storeLabels) => {
-  //     return [...new Set([...storeLabels, newLabel])];
-  //   });
-  //   addDescription(newLabel);
-  //   return newLabel; // return the new label to the autocomplete
-  // }
+  function addKeyword(newKeyword: string) {
+    console.log("add",newKeyword)
+    if (!newKeyword || newKeyword === "") {
+      return;
+    }
+    let hitNegKeywords = hit.keywords;
+    let hitLabels = hit.labels;
+    if (hitNegKeywords && hitNegKeywords.length > 0) {
+      if (hitNegKeywords.includes(newKeyword)) {
+        api.removeLabel(hit.image_path, newKeyword, "keywords");
+        if (hitLabels && hitLabels.length > 0 && hitLabels.includes(newKeyword)){
+          hitLabels = hitLabels.filter((l) => l !== newKeyword);
+          api.removeLabel(hit.image_path, newKeyword, "labels");
+        }
+      }else{
+        hitNegKeywords = [...new Set([...hitNegKeywords, newKeyword])];
+        hitLabels = [...new Set([...hitLabels, newKeyword])];
+      }
+    } else {
+      hitNegKeywords = [newKeyword];
+      hitLabels = [...new Set([...hitLabels, newKeyword])];
+    }
+    hit.keywords = hitNegKeywords;
+    hit.labels = hitLabels;
+    try {
+      api.addLabel(hit.image_path, newKeyword, "keywords");
+      api.addLabel(hit.image_path, newKeyword, "labels");
+    } catch (e) {
+      console.log(e);
+    }
+  }
 
   function onChangeDescription(newLabel: string) {
     if (newLabel) {
@@ -182,15 +226,21 @@
     }
   }
 
-  // function handleCreateAnimal(newAnimal: string) {
-  //   console.log(hit);
+  function onChangeKeyword(newKeyword: string) {
+    if (newKeyword) {
+      console.log("onChangeKeyword", newKeyword);
+      addKeyword(newKeyword);
+    } else {
+      console.log("undefined Keyword: ", newKeyword);
+    }
+  }
 
-  //   animalStore.update((storeAnimals) => {
-  //     return [...new Set([...storeAnimals, newAnimal])];
-  //   });
-  //   addAnimal(newAnimal);
-  //   return newAnimal; // return the new label to the autocomplete
-  // }
+  function handleCreateKeyword(newKeyword: string) {
+    negativeKeywordStore.update((storeNegKeyword) => {
+      return [...new Set([...storeNegKeyword, newKeyword])];
+    });
+    return newKeyword; // return the new label to the autocomplete
+  }
 
   function onChangeAnimal(newAnimal: string) {
     if (newAnimal) {
@@ -201,15 +251,9 @@
     }
   }
 
-  // function handleCheckListing(listings: any) {
-  //   const selectedListing = listings.name;
-  //   if (selectedListing) {
-  //     console.log("onCheckListing", selectedListing);
-  //     addOrRemoveListing(selectedListing);
-  //   } else {
-  //     console.log("undefined check: ", selectedListing);
-  //   }
-  // }
+  function removeLabel(label: string) {
+
+  }
 
 </script>
 
@@ -240,7 +284,7 @@
           <i class="fa fa-thumbs-down" aria-hidden="true" />
         </button>
       </div>
-      <div class="btn-group me-2" role="group" aria-label="">
+      <div class="btn-group me-2 mt-1" role="group" aria-label="">
         <AutoComplete
           debug={false}
           inputClassName="form-control"
@@ -267,31 +311,30 @@
             />
           </div>
         </div>
-        <!-- {#each listings as listing}
-        <div class=box-container>
-          <div
-              class="btn-group btn-group-toggle btn-group-sm"
-              data-toggle="buttons"
-            >
-              <label class="btn btn-sm btn-outline-primary"  style="font-size: 0.7em">
-                <input
-                  class="form-check-input"
-                  id={listing.id}
-                  type="checkbox"
-                  value={listing}
-                  autocomplete="off"
-                  on:change={() => {handleCheckListing(listing)}}
-                /> {listing.name}
-              </label>
+        <div class="box-container">
+          <div class="btn-group me-2" role="group" aria-label="">
+            <AutoComplete
+              debug={false}
+              inputClassName="form-control"
+              items={allNegKeywords}
+              bind:selectedItem={selectedNegKeyword}
+              create={true}
+              onChange={onChangeKeyword}
+              onCreate={handleCreateKeyword}
+              placeholder="Negative Keyword"
+            />
           </div>
         </div>
-        {/each} -->
     {#if hitLabels && hitLabels.length > 0}
       <div class="btn-toolbar">
         {#each hitLabels as label, idx}
-          <span class="badge rounded-pill bg-secondary me-1 mt-2">
+          <span class="badge rounded-pill bg-secondary me-1 mt-2  position-relative">
             <!-- style="background-color: {colors[idx]} !important;" -->
             {label}
+            <span role="button" on:click={() => removeLabel(label)} class="position-absolute top-0 start-100 translate-middle">
+              <i class="fa fa-times-circle" aria-hidden="true" />
+              <span class="visually-hidden">Remove label</span>
+            </span>
           </span>
         {/each}
       </div>
@@ -311,15 +354,21 @@
 
 <Modal bind:showModal>
 	<h2 slot="header">
-		metadata
+		Metadata
 	</h2>
 
-	<ol class="definition-list">
-    Title:
-    {hit.title ? hit.title : hit.image_path}
-    Metadata:
-    {hit.metadata}
-	</ol>
+	<ul slot="body" class="definition-list___">
+    <li>
+      <strong>title:</strong> {hit.title ? hit.title : hit.image_path}
+    </li>
+    {#each Object.keys(parsedHitMetadata) as key}
+    <li>
+      <strong>{key}:</strong> {parsedHitMetadata[key]}
+    </li>
+    {/each}
+    <!-- Metadata:
+    {hit.metadata} -->
+	</ul>
 </Modal>
 
 
@@ -362,6 +411,7 @@
     border: var(--bs-dropdown-border-width) solid
       var(--bs-dropdown-border-color) !important;
     border-radius: var(--bs-dropdown-border-radius) !important;
+    width: 171px !important;
   }
   :global(.autocomplete-list-item) {
     color: var(--bs-dropdown-color) !important;

@@ -181,7 +181,6 @@ def make_df(
         if embedding is not None:
             vectors.append(embedding)
             image_paths.append(image_path)
-            print(df.columns)
             titles.append(df.loc[df["image_path"] == image_path, "title"].values[0])
             metadatas.append(df.loc[df["image_path"] == image_path, "metadata"].values[0])
 

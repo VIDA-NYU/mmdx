@@ -44,7 +44,7 @@ class VectorDB:
         db_path: str,
         S3_Client: Optional[S3Client],
         model: BaseEmbeddingModel,
-        delete_existing=True,
+        delete_existing: bool = True,
         batch_load: bool = DB_BATCH_LOAD,
         batch_size: int = DB_BATCH_SIZE,
     ):
@@ -84,7 +84,7 @@ class VectorDB:
         self.labelsdb.remove_records(image_path=image_path, label=label, table=table)
 
     def get_labels(self, image_path: Optional[str] = None) -> List[str]:
-        return self.labelsdb.get(image_path=image_path)
+        return self.labelsdb.get(image_path=image_path, table="labels")
 
     def get_label_counts(self) -> dict:
         return self.labelsdb.counts()

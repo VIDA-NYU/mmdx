@@ -1,25 +1,15 @@
 <script>
-  import PapaParse from 'papaparse'
   import * as api from "./Api";
 
   export let dataToCSV = [];
   let prevDataToCSV;
 
-  export let allowedFileExtensions = ['csv'];
+  export let allowedFileExtensions = ["csv"];
 
   let maxFileSize = 31457280;
 
   // this is the variable that the file gets bound to
   let uploader;
-
-  $: {
-    // called on props change
-    if (dataToCSV !== prevDataToCSV && dataToCSV.length !== 0) {
-      prevDataToCSV = dataToCSV;
-      const csvData = PapaParse.unparse(dataToCSV);
-      onUpload ? onUpload(csvData) : console.log("Remember to define an onUpload function as props. CSV Data:", csvData);
-    }
-  }
 
   let uploading = false; // Add a variable to track the uploading state
   let responseMessage = "";
@@ -42,22 +32,28 @@
 </script>
 
 <div class="container">
-  <h1>Load CSV data</h1>
-  <p>Select a CSV file</p>
-  <input bind:this={uploader} type="file" />
-  <div>
-    <button class="btn btn-primary" on:click={uploadFile} type="file">
-      Load CSV
-    </button>
-  </div>
+  <div class="py-4">
+    <h1>Load CSV data</h1>
+    <p>Select a CSV file</p>
+    <input bind:this={uploader} type="file" class="form-control" style="max-width:400px"/>
+    <div class="pt-2">
+      <button class="btn btn-primary" on:click={uploadFile} >
+        <span class="fa fa-download mr-2" type="file" />
+        Load CSV
+      </button>
+    </div>
 
-  {#if uploading}
-    <div>
-      <p>Uploading...</p>
+    <div class="mt-2">
+    {#if uploading}
+        <span>
+          <i class="fa fa-spinner fa-spin" aria-hidden="true" />
+          Loading...
+        </span>
+        {:else if responseMessage}
+        <div>
+          <p>{responseMessage}</p>
+        </div>
+        {/if}
+      </div>
     </div>
-  {:else if responseMessage}
-    <div>
-      <p>{responseMessage}</p>
-    </div>
-  {/if}
-</div>
+  </div>

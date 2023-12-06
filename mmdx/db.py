@@ -28,7 +28,7 @@ class LabelsDB:
     def __init__(self, db_file: str):
         self.db_file = db_file
         _, cursor = get_db_connection(db_file)
-        self.tables = ["animal", "relevant", "labels", "description"]
+        self.tables = ["animal", "relevant", "labels", "description", "keywords"]
         self.create_tables(cursor)
 
 
@@ -67,13 +67,13 @@ class LabelsDB:
         _, cursor = get_db_connection(self.db_file)
         if image_path is None:
             query = f"SELECT DISTINCT relevant.label FROM relevant"
-            for table in ["animal, description"]:
-                query += f" LEFT JOIN {table} ON relevant.label = {table}.label"
-            cursor.execute(query + ";")
+            # for table_name in ["animal, description"]:
+            #     query += f" LEFT JOIN {table_name} ON relevant.label = {table_name}.label"
+            cursor.execute(query)
         else:
             query = f"SELECT DISTINCT relevant.label FROM labels"
-            for table in ["animal, description"]:
-                query += f" LEFT JOIN {table} ON relevant.label = {table}.label WHERE {table}.image_path = ?"
+            for table_name in ["animal, description"]:
+                query += f" LEFT JOIN {table_name} ON relevant.label = {table_name}.label WHERE {table_name}.image_path = ?"
             cursor.execute(query + ";", (image_path,))
         return [row[0] for row in cursor.fetchall()]
 
