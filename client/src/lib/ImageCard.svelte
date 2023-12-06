@@ -9,6 +9,7 @@
 
   let allLabels: string[];
   let selectedLabel: string;
+  let isSelected: boolean = false;
 
   // $: hitLabels = hit.labels?.filter((l) => l); // filter undefined labels
   $: hitLabels = hit.labels;
@@ -59,6 +60,10 @@
     }
   }
 
+  function togggleSelected() {
+    isSelected = !isSelected;
+  }
+
   function handleCreateLabel(newLabel: string) {
     console.log(hit);
 
@@ -84,6 +89,7 @@
     src={"/images/" + hit.image_path}
     style="max-height: 350px;"
     class="card-img-top"
+    on:click={() => togggleSelected()}
   />
 
   <div class="card-body">
@@ -130,14 +136,19 @@
         {/each}
       </div>
     {/if}
-    <div class="btn-toolbar mt-2">
-      <button
-        class="btn btn-sm btn-info"
-        on:click={() => navigate("/search/image?q=" + hit.image_path)}
-      >
-        <i class="fa fa-search" aria-hidden="true" />
-        Find Similar
-      </button>
+    <div class="d-flex justify-content-between mt-2">
+      <div class="btn-toolbar">
+        <button
+          class="btn btn-sm btn-info"
+          on:click={() => navigate("/search/image?q=" + hit.image_path)}
+        >
+          <i class="fa fa-search" aria-hidden="true" />
+          Find Similar
+        </button>
+      </div>
+      <div class="row align-items-center me-1">
+        <input type="checkbox" id="selectedCheck" bind:checked={isSelected} />
+      </div>
     </div>
   </div>
 </div>
