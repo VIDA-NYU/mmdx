@@ -99,7 +99,8 @@ def remove_label():
 
 @app.route("/api/v1/labels")
 def labels():
-    labels = db.get_labels()
+    table: str = request.args.get("table", None, type=str)
+    labels = db.get_labels(table)
     return {"labels": labels}
 
 

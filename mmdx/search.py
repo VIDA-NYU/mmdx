@@ -83,8 +83,8 @@ class VectorDB:
     def remove_label(self, image_path: str, label: str, table: str):
         self.labelsdb.remove_records(image_path=image_path, label=label, table=table)
 
-    def get_labels(self, image_path: Optional[str] = None) -> List[str]:
-        return self.labelsdb.get(image_path=image_path, table="labels")
+    def get_labels(self, table: str, image_path: Optional[str] = None) -> List[str]:
+        return self.labelsdb.get(image_path=image_path, table=table)
 
     def get_label_counts(self) -> dict:
         return self.labelsdb.counts()
@@ -93,15 +93,28 @@ class VectorDB:
         lance_tbl = self.tbl.to_lance()
         df_hits = duckdb.sql(
             f"""
-            SELECT lance_tbl.*, grouped_labels.labels FROM lance_tbl
+            SELECT lance_tbl.*, grouped_labels.labels, grouped_labels.types FROM lance_tbl
             LEFT OUTER JOIN (
-                SELECT image_path, list(label) AS labels FROM sqlite_scan('{self.labelsdb_path}', 'labels') GROUP BY image_path
+                SELECT image_path,
+                       list(label) AS labels,
+                       list(type) AS types
+                FROM (
+                    SELECT image_path, label, 'description' AS type FROM sqlite_scan('{self.labelsdb_path}', 'description')
+                    UNION ALL
+                    SELECT image_path, label, 'relevant' AS type FROM sqlite_scan('{self.labelsdb_path}', 'relevant')
+                    UNION ALL
+                    SELECT image_path, label, 'animal' AS type FROM sqlite_scan('{self.labelsdb_path}', 'animal')
+                    UNION ALL
+                    SELECT image_path, label, 'keywords' AS type FROM sqlite_scan('{self.labelsdb_path}', 'keywords')
+                ) GROUP BY image_path
             ) AS grouped_labels
             ON (lance_tbl.image_path = grouped_labels.image_path)
             USING SAMPLE {limit} ROWS;
         """
         ).to_df()
         df_hits["labels"] = df_hits["labels"].fillna("").apply(list)
+        df_hits["types"] = df_hits["types"].fillna("").apply(list)
+        df_hits["labels_types_dict"] = df_hits.apply(lambda row: {label: type for label, type in zip(row["labels"], row["types"])}, axis=1)
         df_hits.drop(columns=["vector"], inplace=True)
         return df_hits
 

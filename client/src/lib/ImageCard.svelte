@@ -1,7 +1,5 @@
 <script lang="ts">
-api.
-
-  import Modal from './Modal.svelte';
+  import Modal from "./Modal.svelte";
   import type { Hit } from "./Api";
   import { navigate } from "svelte-routing";
   import { labelStore, animalStore, negativeKeywordStore } from "./stores";
@@ -9,10 +7,7 @@ api.
   import * as api from "./Api";
 
   export let hit: Hit;
-  $: parsedHitMetadata = JSON.parse(hit.metadata);
-
-  console.log('hit.metadata', hit.metadata);
-  console.log('parsed', parsedHitMetadata);
+  $: parsedHitMetadata = hit.metadata;
 
   let showModal = false;
 
@@ -23,7 +18,7 @@ api.
   let selectedNegKeyword: string;
   let selectedAnimal: string;
   $: hitLabels = hit.labels;
-
+  $: hittypes = hit.labels_types_dict;
 
   // tableau10 colors
   const colors = [
@@ -51,7 +46,6 @@ api.
     allNegKeywords = storeNegKeyword;
   });
 
-
   function addLabel(newLabel: string) {
     if (!newLabel || newLabel === "") {
       return;
@@ -62,11 +56,17 @@ api.
       if (hitRelevants.includes(newLabel)) {
         return;
       }
-      if (newLabel === "animal origin" && hitRelevants.includes("not animal origin")) {
+      if (
+        newLabel === "animal origin" &&
+        hitRelevants.includes("not animal origin")
+      ) {
         api.removeLabel(hit.image_path, "not animal origin", "relevant");
         hitLabels = hitLabels.filter((l) => l !== "not animal origin");
         hitRelevants = hitRelevants.filter((l) => l !== "not animal origin");
-      } else if (newLabel === "not animal origin" && hitLabels.includes("animal origin")) {
+      } else if (
+        newLabel === "not animal origin" &&
+        hitLabels.includes("animal origin")
+      ) {
         api.removeLabel(hit.image_path, "animal origin", "relevant");
         hitLabels = hitLabels.filter((l) => l !== "animal origin");
         hitRelevants = hitRelevants.filter((l) => l !== "animal origin");
@@ -96,11 +96,14 @@ api.
       if (hitDescription.includes(newDescription)) {
         api.removeLabel(hit.image_path, newDescription, "description");
         hitDescription = hitDescription.filter((l) => l !== newDescription);
-        if (hitLabels && hitLabels.length > 0 && hitLabels.includes(newDescription)){
+        if (
+          hitLabels &&
+          hitLabels.length > 0 &&
+          hitLabels.includes(newDescription)
+        ) {
           hitLabels = hitLabels.filter((l) => l !== newDescription);
-          api.removeLabel(hit.image_path, newDescription, "labels");
         }
-      }else{
+      } else {
         hitDescription = [...new Set([...hitDescription, newDescription])];
         hitLabels = [...new Set([...hitLabels, newDescription])];
       }
@@ -112,14 +115,12 @@ api.
     hit.labels = hitLabels;
     try {
       api.addLabel(hit.image_path, newDescription, "description");
-      api.addLabel(hit.image_path, newDescription, "labels");
     } catch (e) {
       console.log(e);
     }
   }
 
   function addAnimal(newAnimal: string) {
-
     if (!newAnimal || newAnimal === "") {
       return;
     }
@@ -129,64 +130,30 @@ api.
       api.removeLabel(hit.image_path, hitAnimal, "animal");
     }
 
-    if (hitLabels && hitLabels.length >0){
-        if (hitAnimal && hitLabels.includes(hitAnimal)){
-          api.removeLabel(hit.image_path, hitAnimal, "labels");
-          hitLabels = hitLabels.filter((l) => l !== hitAnimal);
-          hitLabels = [...new Set([...hitLabels, newAnimal])];
-        } else{
-          hitLabels = [...new Set([...hitLabels, newAnimal])];
-        }
-    }else {
+    if (hitLabels && hitLabels.length > 0) {
+      if (hitAnimal && hitLabels.includes(hitAnimal)) {
+        hitLabels = hitLabels.filter((l) => l !== hitAnimal);
+        hitLabels = [...new Set([...hitLabels, newAnimal])];
+      } else {
+        hitLabels = [...new Set([...hitLabels, newAnimal])];
+      }
+    } else {
       hit.labels = [newAnimal];
       hitLabels = hit.labels;
     }
-    hit.labels = hitLabels
+    hit.labels = hitLabels;
     hitAnimal = newAnimal;
     hit.animal = hitAnimal;
 
     try {
       api.addLabel(hit.image_path, newAnimal, "animal");
-      api.addLabel(hit.image_path, newAnimal, "labels");
     } catch (e) {
       console.log(e);
     }
   }
 
-  // function addKeyword(newKeyword: string) {
-  //   if (!newKeyword || newKeyword === "") {
-  //     return;
-  //   }
-  //   let hitLabels = hit.labels;
-  //   let hitNegKeywords = hit.keywords;
-  //   if (hitNegKeywords && hitNegKeywords.length > 0) {
-  //     if (hitNegKeywords.includes(newKeyword)) {
-  //       api.removeLabel(hit.image_path, newKeyword, "keywords");
-  //       hitNegKeywords
-  //       if (hitLabels && hitLabels.length > 0 && hitLabels.includes(newKeyword)){
-  //         api.removeLabel(hit.image_path, newKeyword, "labels");
-  //         hitLabels = hitLabels.filter((l) => l !== newKeyword);
-  //       }
-  //     } else{
-  //       hitNegKeywords = [...new Set([...hitNegKeywords, newKeyword])];
-  //       api.addLabel(hit.image_path, newKeyword, "keywords");
-  //       if (hitLabels && hitLabels.length > 0 && !hitLabels.includes(newKeyword)){
-  //         hitLabels = [...new Set([...hitLabels, newKeyword])];
-  //         api.addLabel(hit.image_path, newKeyword, "labels");
-  //       }
-  //     }
-  //   } else {
-  //     hitLabels = [...new Set([...hitLabels, newKeyword])];
-  //     hitNegKeywords = [newKeyword]
-  //     api.addLabel(hit.image_path, newKeyword, "keywords");
-  //     api.addLabel(hit.image_path, newKeyword, "labels");
-  //   }
-  //   hit.labels = hitLabels;
-  //   hit.keywords = hitNegKeywords;
-  // }
-
   function addKeyword(newKeyword: string) {
-    console.log("add",newKeyword)
+    console.log("add", newKeyword);
     if (!newKeyword || newKeyword === "") {
       return;
     }
@@ -195,11 +162,14 @@ api.
     if (hitNegKeywords && hitNegKeywords.length > 0) {
       if (hitNegKeywords.includes(newKeyword)) {
         api.removeLabel(hit.image_path, newKeyword, "keywords");
-        if (hitLabels && hitLabels.length > 0 && hitLabels.includes(newKeyword)){
+        if (
+          hitLabels &&
+          hitLabels.length > 0 &&
+          hitLabels.includes(newKeyword)
+        ) {
           hitLabels = hitLabels.filter((l) => l !== newKeyword);
-          api.removeLabel(hit.image_path, newKeyword, "labels");
         }
-      }else{
+      } else {
         hitNegKeywords = [...new Set([...hitNegKeywords, newKeyword])];
         hitLabels = [...new Set([...hitLabels, newKeyword])];
       }
@@ -211,7 +181,6 @@ api.
     hit.labels = hitLabels;
     try {
       api.addLabel(hit.image_path, newKeyword, "keywords");
-      api.addLabel(hit.image_path, newKeyword, "labels");
     } catch (e) {
       console.log(e);
     }
@@ -224,6 +193,13 @@ api.
     } else {
       console.log("undefined Description: ", newLabel);
     }
+  }
+
+  function handleCreateDescription(newLabel: string) {
+    labelStore.update((storeLabels) => {
+      return [...new Set([...storeLabels, newLabel])];
+    });
+    return newLabel; // return the new label to the autocomplete
   }
 
   function onChangeKeyword(newKeyword: string) {
@@ -251,10 +227,18 @@ api.
     }
   }
 
-  function removeLabel(label: string) {
-
+  function removeLabels(label: string) {
+    let hitLabels = hit.labels;
+    let hittypes = hit.labels_types_dict;
+    if (hittypes && hittypes[label]) {
+      api.removeLabel(hit.image_path, label, hittypes[label]);
+      hittypes = hit.labels_types_dict;
+    }
+    if (hitLabels && hitLabels.includes(label)) {
+      hitLabels = hitLabels.filter((l) => l !== label);
+      hit.labels = hitLabels;
+    }
   }
-
 </script>
 
 <div class="card me-3 mb-3">
@@ -268,7 +252,9 @@ api.
     <p class="card-text mb-2">
       {hit.title ? hit.title : hit.image_path}
     </p>
-    <button class="btn btn-sm btn-info" on:click={() => (showModal = true)}>Metadata</button>
+    <button class="btn btn-sm btn-info" on:click={() => (showModal = true)}
+      >Metadata</button
+    >
     <div class="btn-toolbar mt-1">
       <div class="btn-group me-2" role="group" aria-label="">
         <button
@@ -294,51 +280,55 @@ api.
           onChange={onChangeAnimal}
           placeholder="Animal"
         />
-        <!-- <button class="btn btn-sm btn-primary">
-          <span class="fa fa-plus" />
-        </button> -->
       </div>
-        <div class="box-container">
-          <div class="btn-group me-2" role="group" aria-label="">
-            <AutoComplete
-              debug={false}
-              inputClassName="form-control"
-              items={allLabels}
-              bind:selectedItem={selectedDescription}
-              create={false}
-              onChange={onChangeDescription}
-              placeholder="Description"
-            />
-          </div>
+      <div class="box-container">
+        <div class="btn-group me-2" role="group" aria-label="">
+          <AutoComplete
+            debug={false}
+            inputClassName="form-control"
+            items={allLabels}
+            bind:selectedItem={selectedDescription}
+            create={true}
+            onCreate={handleCreateDescription}
+            onChange={onChangeDescription}
+            placeholder="Description"
+          />
         </div>
-        <div class="box-container">
-          <div class="btn-group me-2" role="group" aria-label="">
-            <AutoComplete
-              debug={false}
-              inputClassName="form-control"
-              items={allNegKeywords}
-              bind:selectedItem={selectedNegKeyword}
-              create={true}
-              onChange={onChangeKeyword}
-              onCreate={handleCreateKeyword}
-              placeholder="Negative Keyword"
-            />
-          </div>
+      </div>
+      <div class="box-container">
+        <div class="btn-group me-2" role="group" aria-label="">
+          <AutoComplete
+            debug={false}
+            inputClassName="form-control"
+            items={allNegKeywords}
+            bind:selectedItem={selectedNegKeyword}
+            create={true}
+            onChange={onChangeKeyword}
+            onCreate={handleCreateKeyword}
+            placeholder="Negative Keyword"
+          />
         </div>
-    {#if hitLabels && hitLabels.length > 0}
-      <div class="btn-toolbar">
-        {#each hitLabels as label, idx}
-          <span class="badge rounded-pill bg-secondary me-1 mt-2  position-relative">
-            <!-- style="background-color: {colors[idx]} !important;" -->
-            {label}
-            <span role="button" on:click={() => removeLabel(label)} class="position-absolute top-0 start-100 translate-middle">
-              <i class="fa fa-times-circle" aria-hidden="true" />
-              <span class="visually-hidden">Remove label</span>
+      </div>
+      {#if hitLabels && hitLabels.length > 0}
+        <div class="btn-toolbar">
+          {#each hitLabels as label, idx}
+            <span
+              class="badge rounded-pill bg-secondary me-1 mt-2 position-relative"
+            >
+              <!-- style="background-color: {colors[idx]} !important;" -->
+              {label}
+              <span
+                role="button"
+                on:click={() => removeLabels(label)}
+                class="position-absolute top-0 start-100 translate-middle"
+              >
+                <i class="fa fa-times-circle" aria-hidden="true" />
+                <span class="visually-hidden">Remove label</span>
+              </span>
             </span>
-          </span>
-        {/each}
-      </div>
-    {/if}
+          {/each}
+        </div>
+      {/if}
     </div>
     <div class="btn-toolbar mt-2">
       <button
@@ -348,29 +338,36 @@ api.
         <i class="fa fa-search" aria-hidden="true" />
         Find Similar
       </button>
-      </div>
     </div>
+  </div>
 </div>
 
 <Modal bind:showModal>
-	<h2 slot="header">
-		Metadata
-	</h2>
+  <h2 slot="header">Metadata</h2>
 
-	<ul slot="body" class="definition-list___">
+  <ul slot="body" class="definition-list___">
     <li>
-      <strong>title:</strong> {hit.title ? hit.title : hit.image_path}
+      <strong>title:</strong>
+      {hit.title ? hit.title : hit.image_path}
     </li>
     {#each Object.keys(parsedHitMetadata) as key}
-    <li>
-      <strong>{key}:</strong> {parsedHitMetadata[key]}
-    </li>
+      <li>
+        {#if key == "url"}
+          <strong>{key}:</strong>
+          <a
+            href={parsedHitMetadata[key]}
+            target="_blank"
+            referrerpolicy="no-referrer">{parsedHitMetadata[key]}</a
+          >
+        {:else}
+          <strong>{key}:</strong> {parsedHitMetadata[key]}
+        {/if}
+      </li>
     {/each}
     <!-- Metadata:
     {hit.metadata} -->
-	</ul>
+  </ul>
 </Modal>
-
 
 <style>
   :global(.autocomplete-list) {
@@ -441,7 +438,7 @@ api.
     width: 171px !important;
   }
   h1 {
-		font-size: 1rem;
-		text-align: center;
-	}
+    font-size: 1rem;
+    text-align: center;
+  }
 </style>

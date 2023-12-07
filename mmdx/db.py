@@ -28,7 +28,7 @@ class LabelsDB:
     def __init__(self, db_file: str):
         self.db_file = db_file
         _, cursor = get_db_connection(db_file)
-        self.tables = ["animal", "relevant", "labels", "description", "keywords"]
+        self.tables = ["animal", "relevant", "description", "keywords"]
         self.create_tables(cursor)
 
 
@@ -51,35 +51,29 @@ class LabelsDB:
         )
         conn.commit()
 
-    def remove_records(self, **kwargs):
-        table = kwargs.pop("table")
+    def remove_records(self, image_path: str, label: str, table: str):
         conn, cursor = get_db_connection(self.db_file)
-        # Generate the WHERE clause based on the provided parameters
-        where_conditions = " AND ".join([f"{key}=?" for key in kwargs.keys()])
-        values = tuple(kwargs.values())
-
-        # Execute the DELETE statement
-        cursor.execute(f"DELETE FROM {table} WHERE {where_conditions};", values)
-
+        cursor.execute(
+            f"DELETE FROM {table} WHERE image_path=? AND label=?;",
+            (image_path, label),
+        )
         conn.commit()
 
     def get(self,  table: str, image_path: Optional[str] = None) -> List[str]:
         _, cursor = get_db_connection(self.db_file)
         if image_path is None:
-            query = f"SELECT DISTINCT relevant.label FROM relevant"
-            # for table_name in ["animal, description"]:
-            #     query += f" LEFT JOIN {table_name} ON relevant.label = {table_name}.label"
+            query = f"SELECT DISTINCT label FROM {table}"
             cursor.execute(query)
         else:
-            query = f"SELECT DISTINCT relevant.label FROM labels"
-            for table_name in ["animal, description"]:
-                query += f" LEFT JOIN {table_name} ON relevant.label = {table_name}.label WHERE {table_name}.image_path = ?"
-            cursor.execute(query + ";", (image_path,))
+            cursor.execute(
+                f"SELECT DISTINCT label FROM {table} WHERE image_path=?;",
+                (image_path,),
+            )
         return [row[0] for row in cursor.fetchall()]
 
     def counts(self) -> dict[str, int]:
         _, cursor = get_db_connection(self.db_file)
-        cursor.execute("SELECT label, COUNT(*) FROM labels GROUP BY label;")
+        cursor.execute("SELECT label, COUNT(*) FROM relevant GROUP BY label;")
         counts = {}
         for row in cursor.fetchall():
             counts[row[0]] = row[1]
@@ -87,8 +81,9 @@ class LabelsDB:
 
     def get_image_paths(self) -> List[str]:
         _, cursor = get_db_connection(self.db_file)
-        cursor.execute("SELECT DISTINCT image_path FROM labels;")
+        cursor.execute("SELECT DISTINCT image_path FROM relevant;")
         return [row[0] for row in cursor.fetchall()]
+
 
     def create_zip_labeled_data(
             self,

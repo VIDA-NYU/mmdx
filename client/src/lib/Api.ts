@@ -15,6 +15,7 @@ export interface Hit {
     description?: string[];
     keywords?: string[];
     metadata?: string;
+    labels_types_dict?: {[key: string]: string; };
 }
 
 
@@ -53,8 +54,10 @@ interface LabelsResponse {
     labels: string[];
 }
 
-export async function loadLabels(): Promise<LabelsResponse> {
-    const response = await fetchJSON<LabelsResponse>("/labels").catch((e) => {
+export async function loadLabels(table: string): Promise<LabelsResponse> {
+    const response = await fetchJSON<LabelsResponse>("/labels", {
+        table
+    }).catch((e) => {
         throw new Error("Failed to load labels.", { cause: e })
     });
     return response;
@@ -74,36 +77,6 @@ export async function addLabel(image_path: string, label: string, table: string)
     });
     return response;
 }
-
-// export async function addDescription(image_path: string, description: string): Promise<AddLabelResponse> {
-//     const response = await fetchJSON<AddLabelResponse>("/add_description", {
-//         image_path,
-//         description
-//     }).catch((e) => {
-//         throw new Error("Failed to save description.", { cause: e })
-//     });
-//     return response;
-// }
-
-// export async function addAnimal(image_path: string, animal: string): Promise<AddLabelResponse> {
-//     const response = await fetchJSON<AddLabelResponse>("/add_animal", {
-//         image_path,
-//         animal
-//     }).catch((e) => {
-//         throw new Error("Failed to save animal name.", { cause: e })
-//     });
-//     return response;
-// }
-
-// export async function addListing(image_path: string, listing: string): Promise<AddLabelResponse> {
-//     const response = await fetchJSON<AddLabelResponse>("/add_listing", {
-//         image_path,
-//         listing
-//     }).catch((e) => {
-//         throw new Error("Failed to save animal name.", { cause: e })
-//     });
-//     return response;
-// }
 
 interface RemoveLabelResponse {
     success: boolean;

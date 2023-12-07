@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Router, Link, Route } from "svelte-routing";
   import { onMount } from "svelte";
-  import { labelStore } from "./lib/stores";
+  import { labelStore, negativeKeywordStore } from "./lib/stores";
   import * as api from "./lib/Api";
   import BootstrapComponents from "./BootstrapComponents.svelte";
   import Search from "./lib/Search.svelte";
@@ -12,14 +12,21 @@
 
   export let url = "";
 
-  // onMount(async () => {
-  //   console.log("Loading labels...");
-  //   const remoteLabels = await api.loadLabels();
-  //   labelStore.update((labels: string[]) => [
-  //     ...new Set([...labels, ...remoteLabels.labels]),
-  //   ]);
-  //   console.log("Labels loaded: ", remoteLabels);
-  // });
+  onMount(async () => {
+    console.log("Loading positive keywords");
+    const remotePositivekeywords = await api.loadLabels("description");
+    labelStore.update((labels: string[]) => [
+      ...new Set([...labels, ...remotePositivekeywords.labels]),
+    ]);
+
+    console.log("Loading negative keywords");
+    const remoteNegativekeywords= await api.loadLabels("keywords");
+    negativeKeywordStore.update((labels: string[]) => [
+      ...new Set([...labels, ...remoteNegativekeywords.labels]),
+    ]);
+
+    console.log("Labels loaded");
+  });
 
   function getLinkProps(args: Object): Object {
     const { href, isPartiallyCurrent, isCurrent } = args as {

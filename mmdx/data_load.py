@@ -5,6 +5,7 @@ import pyarrow as pa
 from typing import Iterator, List, Optional
 import random
 import tqdm
+import json
 from .model import BaseEmbeddingModel
 from .settings import (
     DB_BATCH_SIZE,
@@ -192,6 +193,7 @@ def make_df(
             "vector": vectors,
         }
     )
+    df['metadata'] = df['metadata'].apply(clean_and_validate_json)
     return df
 
 
@@ -203,3 +205,16 @@ def load_df(
     S3_Client: Optional[S3Client],
 ) -> lancedb.table.Table:
     return db.create_table(table_name, data=make_df(data_path, model, S3_Client))
+
+
+def clean_and_validate_json(json_str):
+    if pd.notna(json_str):
+        try:
+            # Try loading the string as JSON to validate it
+            json_object = json.loads(json_str)
+            return json_object
+        except json.JSONDecodeError as e:
+            print(f"Error decoding JSON: {e}")
+            return None
+    else:
+        return None
