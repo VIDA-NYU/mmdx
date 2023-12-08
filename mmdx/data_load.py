@@ -5,6 +5,7 @@ import pyarrow as pa
 from typing import Iterator, List, Optional
 import random
 import tqdm
+import json
 from .model import BaseEmbeddingModel
 from .settings import (
     DB_BATCH_SIZE,
@@ -61,6 +62,11 @@ def get_image_files(data_path: str, S3_Client: S3Client):
         print("Getting images from CSV file")
         csv_data = S3_Client.get_obj(DEFAULT_CSV_BUCKET, CSV_FILENAME)
         df = pd.read_csv(BytesIO(csv_data.read()))
+        image_files = df["image_path"].to_list()
+    elif os.environ.get("CSV_PATH"):
+        csv_path = os.environ.get("CSV_PATH")
+        print("Getting images from CSV upload by user")
+        df = pd.read_csv(csv_path)
         image_files = df["image_path"].to_list()
     else:
         image_files = S3_Client.list_objects_names(data_path)
@@ -168,6 +174,7 @@ def make_df(
     titles = []
     image_paths = []
     vectors = []
+    metadatas = []
     for image_path in tqdm.tqdm(image_files):
         image_path, embedding = embed_image_files(
             model, data_path, [image_path], S3_Client
@@ -176,14 +183,17 @@ def make_df(
             vectors.append(embedding)
             image_paths.append(image_path)
             titles.append(df.loc[df["image_path"] == image_path, "title"].values[0])
+            metadatas.append(df.loc[df["image_path"] == image_path, "metadata"].values[0])
 
     df = pd.DataFrame(
         {
             "title": titles,
+            "metadata": metadatas,
             "image_path": image_paths,
             "vector": vectors,
         }
     )
+    df['metadata'] = df['metadata'].apply(clean_and_validate_json)
     return df
 
 
@@ -195,3 +205,16 @@ def load_df(
     S3_Client: Optional[S3Client],
 ) -> lancedb.table.Table:
     return db.create_table(table_name, data=make_df(data_path, model, S3_Client))
+
+
+def clean_and_validate_json(json_str):
+    if pd.notna(json_str):
+        try:
+            # Try loading the string as JSON to validate it
+            json_object = json.loads(json_str)
+            return json_object
+        except json.JSONDecodeError as e:
+            print(f"Error decoding JSON: {e}")
+            return None
+    else:
+        return None

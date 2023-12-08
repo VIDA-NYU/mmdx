@@ -1,17 +1,24 @@
 <script lang="ts">
+  import Modal from "./Modal.svelte";
   import type { Hit } from "./Api";
   import { navigate } from "svelte-routing";
-  import { labelStore } from "./stores";
+  import { labelStore, animalStore, negativeKeywordStore } from "./stores";
   import AutoComplete from "simple-svelte-autocomplete";
   import * as api from "./Api";
 
   export let hit: Hit;
+  $: parsedHitMetadata = hit.metadata;
+
+  let showModal = false;
 
   let allLabels: string[];
-  let selectedLabel: string;
-
-  // $: hitLabels = hit.labels?.filter((l) => l); // filter undefined labels
+  let allAnimals: string[];
+  let allNegKeywords: string[];
+  let selectedDescription: string;
+  let selectedNegKeyword: string;
+  let selectedAnimal: string;
   $: hitLabels = hit.labels;
+  $: hittypes = hit.labels_types_dict;
 
   // tableau10 colors
   const colors = [
@@ -31,50 +38,205 @@
     allLabels = storeLabels;
   });
 
+  animalStore.subscribe((storeAnimals) => {
+    allAnimals = storeAnimals;
+  });
+
+  negativeKeywordStore.subscribe((storeNegKeyword) => {
+    allNegKeywords = storeNegKeyword;
+  });
+
   function addLabel(newLabel: string) {
     if (!newLabel || newLabel === "") {
       return;
     }
     let hitLabels = hit.labels;
-    if (hitLabels && hitLabels.length > 0) {
-      if (hitLabels.includes(newLabel)) {
+    let hitRelevants = hit.relevant;
+    if (hitRelevants && hitRelevants.length > 0) {
+      if (hitRelevants.includes(newLabel)) {
         return;
       }
-      if (newLabel === "relevant" && hitLabels.includes("irrelevant")) {
-        api.removeLabel(hit.image_path, "irrelevant");
-        hitLabels = hitLabels.filter((l) => l !== "irrelevant");
-      } else if (newLabel === "irrelevant" && hitLabels.includes("relevant")) {
-        api.removeLabel(hit.image_path, "relevant");
-        hitLabels = hitLabels.filter((l) => l !== "relevant");
+      if (
+        newLabel === "animal origin" &&
+        hitRelevants.includes("not animal origin")
+      ) {
+        api.removeLabel(hit.image_path, "not animal origin", "relevant");
+        hitLabels = hitLabels.filter((l) => l !== "not animal origin");
+        hitRelevants = hitRelevants.filter((l) => l !== "not animal origin");
+      } else if (
+        newLabel === "not animal origin" &&
+        hitLabels.includes("animal origin")
+      ) {
+        api.removeLabel(hit.image_path, "animal origin", "relevant");
+        hitLabels = hitLabels.filter((l) => l !== "animal origin");
+        hitRelevants = hitRelevants.filter((l) => l !== "animal origin");
       }
       hitLabels = [...new Set([...hitLabels, newLabel])];
+      hitRelevants = [...new Set([...hitRelevants, newLabel])];
     } else {
-      hitLabels = [newLabel];
+      hitLabels = [...new Set([...hitLabels, newLabel])];
+      hitRelevants = [newLabel];
     }
     hit.labels = hitLabels;
+    hit.relevant = hitRelevants;
     try {
-      api.addLabel(hit.image_path, newLabel);
+      api.addLabel(hit.image_path, newLabel, "relevant");
     } catch (e) {
       console.log(e);
     }
   }
 
-  function handleCreateLabel(newLabel: string) {
-    console.log(hit);
+  function addDescription(newDescription: string) {
+    if (!newDescription || newDescription === "") {
+      return;
+    }
+    let hitDescription = hit.description;
+    let hitLabels = hit.labels;
+    if (hitDescription && hitDescription.length > 0) {
+      if (hitDescription.includes(newDescription)) {
+        api.removeLabel(hit.image_path, newDescription, "description");
+        hitDescription = hitDescription.filter((l) => l !== newDescription);
+        if (
+          hitLabels &&
+          hitLabels.length > 0 &&
+          hitLabels.includes(newDescription)
+        ) {
+          hitLabels = hitLabels.filter((l) => l !== newDescription);
+        }
+      } else {
+        hitDescription = [...new Set([...hitDescription, newDescription])];
+        hitLabels = [...new Set([...hitLabels, newDescription])];
+      }
+    } else {
+      hitDescription = [newDescription];
+      hitLabels = [...new Set([...hitLabels, newDescription])];
+    }
+    hit.description = hitDescription;
+    hit.labels = hitLabels;
+    try {
+      api.addLabel(hit.image_path, newDescription, "description");
+    } catch (e) {
+      console.log(e);
+    }
+  }
 
+  function addAnimal(newAnimal: string) {
+    if (!newAnimal || newAnimal === "") {
+      return;
+    }
+    let hitLabels = hit.labels;
+    let hitAnimal = hit.animal;
+    if (hitAnimal && hitAnimal !== newAnimal) {
+      api.removeLabel(hit.image_path, hitAnimal, "animal");
+    }
+
+    if (hitLabels && hitLabels.length > 0) {
+      if (hitAnimal && hitLabels.includes(hitAnimal)) {
+        hitLabels = hitLabels.filter((l) => l !== hitAnimal);
+        hitLabels = [...new Set([...hitLabels, newAnimal])];
+      } else {
+        hitLabels = [...new Set([...hitLabels, newAnimal])];
+      }
+    } else {
+      hit.labels = [newAnimal];
+      hitLabels = hit.labels;
+    }
+    hit.labels = hitLabels;
+    hitAnimal = newAnimal;
+    hit.animal = hitAnimal;
+
+    try {
+      api.addLabel(hit.image_path, newAnimal, "animal");
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
+  function addKeyword(newKeyword: string) {
+    console.log("add", newKeyword);
+    if (!newKeyword || newKeyword === "") {
+      return;
+    }
+    let hitNegKeywords = hit.keywords;
+    let hitLabels = hit.labels;
+    if (hitNegKeywords && hitNegKeywords.length > 0) {
+      if (hitNegKeywords.includes(newKeyword)) {
+        api.removeLabel(hit.image_path, newKeyword, "keywords");
+        if (
+          hitLabels &&
+          hitLabels.length > 0 &&
+          hitLabels.includes(newKeyword)
+        ) {
+          hitLabels = hitLabels.filter((l) => l !== newKeyword);
+        }
+      } else {
+        hitNegKeywords = [...new Set([...hitNegKeywords, newKeyword])];
+        hitLabels = [...new Set([...hitLabels, newKeyword])];
+      }
+    } else {
+      hitNegKeywords = [newKeyword];
+      hitLabels = [...new Set([...hitLabels, newKeyword])];
+    }
+    hit.keywords = hitNegKeywords;
+    hit.labels = hitLabels;
+    try {
+      api.addLabel(hit.image_path, newKeyword, "keywords");
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
+  function onChangeDescription(newLabel: string) {
+    if (newLabel) {
+      console.log("onChangeDescription", newLabel);
+      addDescription(newLabel);
+    } else {
+      console.log("undefined Description: ", newLabel);
+    }
+  }
+
+  function handleCreateDescription(newLabel: string) {
     labelStore.update((storeLabels) => {
       return [...new Set([...storeLabels, newLabel])];
     });
-    addLabel(newLabel);
     return newLabel; // return the new label to the autocomplete
   }
 
-  function onChangeLabel(newLabel: string) {
-    if (newLabel) {
-      console.log("onChangeLabel", newLabel);
-      addLabel(newLabel);
+  function onChangeKeyword(newKeyword: string) {
+    if (newKeyword) {
+      console.log("onChangeKeyword", newKeyword);
+      addKeyword(newKeyword);
     } else {
-      console.log("undefined label: ", newLabel);
+      console.log("undefined Keyword: ", newKeyword);
+    }
+  }
+
+  function handleCreateKeyword(newKeyword: string) {
+    negativeKeywordStore.update((storeNegKeyword) => {
+      return [...new Set([...storeNegKeyword, newKeyword])];
+    });
+    return newKeyword; // return the new label to the autocomplete
+  }
+
+  function onChangeAnimal(newAnimal: string) {
+    if (newAnimal) {
+      console.log("onChangeAnimal", newAnimal);
+      addAnimal(newAnimal);
+    } else {
+      console.log("undefined label: ", newAnimal);
+    }
+  }
+
+  function removeLabels(label: string) {
+    let hitLabels = hit.labels;
+    let hittypes = hit.labels_types_dict;
+    if (hittypes && hittypes[label]) {
+      api.removeLabel(hit.image_path, label, hittypes[label]);
+      hittypes = hit.labels_types_dict;
+    }
+    if (hitLabels && hitLabels.includes(label)) {
+      hitLabels = hitLabels.filter((l) => l !== label);
+      hit.labels = hitLabels;
     }
   }
 </script>
@@ -90,46 +252,84 @@
     <p class="card-text mb-2">
       {hit.title ? hit.title : hit.image_path}
     </p>
+    <button class="btn btn-sm btn-info" on:click={() => (showModal = true)}
+      >Metadata</button
+    >
     <div class="btn-toolbar mt-1">
       <div class="btn-group me-2" role="group" aria-label="">
         <button
           class="btn btn-sm btn-success"
-          on:click={() => addLabel("relevant")}
+          on:click={() => addLabel("animal origin")}
         >
           <i class="fa fa-thumbs-up" aria-hidden="true" />
         </button>
         <button
           class="btn btn-sm btn-warning"
-          on:click={() => addLabel("irrelevant")}
+          on:click={() => addLabel("not animal origin")}
         >
           <i class="fa fa-thumbs-down" aria-hidden="true" />
         </button>
       </div>
-      <div class="btn-group me-2" role="group" aria-label="">
+      <div class="btn-group me-2 mt-1" role="group" aria-label="">
         <AutoComplete
           debug={false}
           inputClassName="form-control"
-          items={allLabels}
-          bind:selectedItem={selectedLabel}
-          create={true}
-          onChange={onChangeLabel}
-          onCreate={handleCreateLabel}
+          items={allAnimals}
+          bind:selectedItem={selectedAnimal}
+          create={false}
+          onChange={onChangeAnimal}
+          placeholder="Animal"
         />
-        <!-- <button class="btn btn-sm btn-primary">
-          <span class="fa fa-plus" />
-        </button> -->
       </div>
+      <div class="box-container">
+        <div class="btn-group me-2" role="group" aria-label="">
+          <AutoComplete
+            debug={false}
+            inputClassName="form-control"
+            items={allLabels}
+            bind:selectedItem={selectedDescription}
+            create={true}
+            onCreate={handleCreateDescription}
+            onChange={onChangeDescription}
+            placeholder="Description"
+          />
+        </div>
+      </div>
+      <div class="box-container">
+        <div class="btn-group me-2" role="group" aria-label="">
+          <AutoComplete
+            debug={false}
+            inputClassName="form-control"
+            items={allNegKeywords}
+            bind:selectedItem={selectedNegKeyword}
+            create={true}
+            onChange={onChangeKeyword}
+            onCreate={handleCreateKeyword}
+            placeholder="Negative Keyword"
+          />
+        </div>
+      </div>
+      {#if hitLabels && hitLabels.length > 0}
+        <div class="btn-toolbar">
+          {#each hitLabels as label, idx}
+            <span
+              class="badge rounded-pill bg-secondary me-1 mt-2 position-relative"
+            >
+              <!-- style="background-color: {colors[idx]} !important;" -->
+              {label}
+              <span
+                role="button"
+                on:click={() => removeLabels(label)}
+                class="position-absolute top-0 start-100 translate-middle"
+              >
+                <i class="fa fa-times-circle" aria-hidden="true" />
+                <span class="visually-hidden">Remove label</span>
+              </span>
+            </span>
+          {/each}
+        </div>
+      {/if}
     </div>
-    {#if hitLabels && hitLabels.length > 0}
-      <div class="btn-toolbar">
-        {#each hitLabels as label, idx}
-          <span class="badge rounded-pill bg-secondary me-1 mt-2">
-            <!-- style="background-color: {colors[idx]} !important;" -->
-            {label}
-          </span>
-        {/each}
-      </div>
-    {/if}
     <div class="btn-toolbar mt-2">
       <button
         class="btn btn-sm btn-info"
@@ -141,6 +341,33 @@
     </div>
   </div>
 </div>
+
+<Modal bind:showModal>
+  <h2 slot="header">Metadata</h2>
+
+  <ul slot="body" class="definition-list___">
+    <li>
+      <strong>title:</strong>
+      {hit.title ? hit.title : hit.image_path}
+    </li>
+    {#each Object.keys(parsedHitMetadata) as key}
+      <li>
+        {#if key == "url"}
+          <strong>{key}:</strong>
+          <a
+            href={parsedHitMetadata[key]}
+            target="_blank"
+            referrerpolicy="no-referrer">{parsedHitMetadata[key]}</a
+          >
+        {:else}
+          <strong>{key}:</strong> {parsedHitMetadata[key]}
+        {/if}
+      </li>
+    {/each}
+    <!-- Metadata:
+    {hit.metadata} -->
+  </ul>
+</Modal>
 
 <style>
   :global(.autocomplete-list) {
@@ -181,6 +408,7 @@
     border: var(--bs-dropdown-border-width) solid
       var(--bs-dropdown-border-color) !important;
     border-radius: var(--bs-dropdown-border-radius) !important;
+    width: 171px !important;
   }
   :global(.autocomplete-list-item) {
     color: var(--bs-dropdown-color) !important;
@@ -208,5 +436,9 @@
   :global(.input-container) {
     /* width: 207px !important; */
     width: 171px !important;
+  }
+  h1 {
+    font-size: 1rem;
+    text-align: center;
   }
 </style>
