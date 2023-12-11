@@ -25,6 +25,7 @@ export async function keywordSearch(queryStr: string, limit: number, excludeLabe
         "exclude_labeled": excludeLabeled,
         limit: limit.toString(),
     }).catch((e) => {
+        console.error(e);
         throw new Error("Failed to retrieve keyword search results.", { cause: e })
     });
     return response;
@@ -36,6 +37,7 @@ export async function similarSearch(imagePath: string, limit: number, excludeLab
         "exclude_labeled": excludeLabeled,
         limit: limit.toString(),
     }).catch((e) => {
+        console.error(e);
         throw new Error("Failed to search for similar images.", { cause: e })
     });
     return response;
@@ -45,6 +47,7 @@ export async function random(limit: number): Promise<Hits> {
     const response = await fetchJSON<Hits>("/random", {
         limit: limit.toString(),
     }).catch((e) => {
+        console.error(e);
         throw new Error("Failed to retrieve random search results.", { cause: e })
     });
     return response;
@@ -58,6 +61,7 @@ export async function loadLabels(table: string): Promise<LabelsResponse> {
     const response = await fetchJSON<LabelsResponse>("/labels", {
         table
     }).catch((e) => {
+        console.error(e);
         throw new Error("Failed to load labels.", { cause: e })
     });
     return response;
@@ -73,6 +77,7 @@ export async function addLabel(image_path: string, label: string, table: string)
         label,
         table
     }).catch((e) => {
+        console.error(e);
         throw new Error("Failed to save label.", { cause: e })
     });
     return response;
@@ -88,6 +93,7 @@ export async function removeLabel(image_path: string, label: string, table: stri
         label,
         table
     }).catch((e) => {
+        console.error(e);
         throw new Error("Failed to remove label.", { cause: e })
     });
     return response;
