@@ -181,9 +181,20 @@ class VectorDB:
     def __join_labels(self, left_table: pd.DataFrame) -> pd.DataFrame:
         df_join = duckdb.sql(
             f"""
-            SELECT left_table.*, grouped_labels.labels FROM left_table
+            SELECT left_table.*, grouped_labels.labels, grouped_labels.types FROM left_table
             LEFT OUTER JOIN (
-                SELECT image_path, list(label) AS labels FROM sqlite_scan('{self.labelsdb_path}', 'labels') GROUP BY image_path
+                SELECT image_path,
+                       list(label) AS labels,
+                       list(type) AS types
+                FROM (
+                    SELECT image_path, label, 'description' AS type FROM sqlite_scan('{self.labelsdb_path}', 'description')
+                    UNION ALL
+                    SELECT image_path, label, 'relevant' AS type FROM sqlite_scan('{self.labelsdb_path}', 'relevant')
+                    UNION ALL
+                    SELECT image_path, label, 'animal' AS type FROM sqlite_scan('{self.labelsdb_path}', 'animal')
+                    UNION ALL
+                    SELECT image_path, label, 'keywords' AS type FROM sqlite_scan('{self.labelsdb_path}', 'keywords')
+                ) GROUP BY image_path
             ) AS grouped_labels
             ON (left_table.image_path = grouped_labels.image_path)
             ORDER BY left_table._distance ASC;
