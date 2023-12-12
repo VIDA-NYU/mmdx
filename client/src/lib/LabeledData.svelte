@@ -42,9 +42,9 @@
     <h1>Downloads</h1>
     <p>
       Only images with labels
-      <span class="badge rounded-pill bg-secondary">relevant</span>
+      <span class="badge rounded-pill bg-secondary">animal origin</span>
       and
-      <span class="badge rounded-pill bg-secondary">irrelevant</span>
+      <span class="badge rounded-pill bg-secondary">not animal origin</span>
       :
     </p>
     <button class="btn btn-primary" on:click={handleClick}>

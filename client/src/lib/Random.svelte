@@ -10,10 +10,10 @@
   function onQuerySubmit() {
     result = random(+limit);
   }
-
-  onMount(() => {
-    onQuerySubmit();
-  });
+  export const someFunc = () => console.log('someFunc');
+  // onLoad(() => {
+  //   onQuerySubmit();
+  // });
 </script>
 
 <div class="container">

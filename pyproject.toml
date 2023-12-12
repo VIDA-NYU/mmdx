@@ -17,6 +17,8 @@ torch = ">=2.0.0, !=2.0.1"
 pyarrow = "^13.0.0"
 gunicorn = "^21.2.0"
 python-dotenv = "^1.0.0"
+minio = "^7.1.17"
+boto3 = "^1.28.83"
 
 [tool.poetry.dev-dependencies]
 pytest  = { version = "^6.2.4" }

@@ -2,6 +2,7 @@ import abc
 import numpy as np
 from PIL import Image
 from transformers import CLIPModel, CLIPProcessor, CLIPTokenizerFast
+import torch
 
 
 # TODO: consider using larger models such as openai/clip-vit-large-patch14
@@ -28,22 +29,23 @@ class BaseEmbeddingModel(abc.ABC):
 
 class ClipModel(BaseEmbeddingModel):
     def __init__(self, model_id=DEFAULT_MODEL_ID) -> None:
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.tokenizer: CLIPTokenizerFast = CLIPTokenizerFast.from_pretrained(model_id)
-        self.model: CLIPModel = CLIPModel.from_pretrained(model_id)
+        self.model: CLIPModel = CLIPModel.from_pretrained(model_id).to(self.device)
         self.processor: CLIPProcessor = CLIPProcessor.from_pretrained(model_id)
 
     def dimensions(self) -> int:
         return 512
 
     def embed_text(self, query: str) -> np.ndarray:
-        inputs = self.tokenizer([query], padding=True, return_tensors="pt")
+        inputs = self.tokenizer([query], padding=True, return_tensors="pt").to(self.device)
         text_features = self.model.get_text_features(**inputs)
-        return text_features.detach().numpy()[0]
+        return text_features.detach().cpu().numpy()[0]
 
     def embed_image(self, image: Image) -> np.ndarray:
-        pixel_values = self.processor(images=image, return_tensors="pt")["pixel_values"]
+        pixel_values = self.processor(images=image, return_tensors="pt")["pixel_values"].to(self.device)
         emb_tensor = self.model.get_image_features(pixel_values)
-        return emb_tensor.detach().numpy()[0]
+        return emb_tensor.detach().cpu().numpy()[0]
 
     def embed_image_path(self, image_path: str) -> np.ndarray:
         return self.embed_image(Image.open(image_path).convert("RGB"))
@@ -52,6 +54,7 @@ class ClipModel(BaseEmbeddingModel):
 class RandomMockModel(BaseEmbeddingModel):
     def __init__(self) -> None:
         super().__init__()
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.dim = 16
 
     def dimensions(self) -> int:
