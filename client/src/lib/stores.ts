@@ -7,5 +7,7 @@ export const animalStore = writable<string[]>(["Ostrich", "Wolf", "Silky shark",
 
 export const negativeKeywordStore = writable<string[]>(negativeKeywords);
 
+export const selectedDataStore = writable({});
+
 export const modal = writable(null);
 export const windowStyle = writable({});
