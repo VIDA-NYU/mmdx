@@ -2,7 +2,12 @@
   import Modal from "./Modal.svelte";
   import type { Hit } from "./Api";
   import { navigate } from "svelte-routing";
-  import { labelStore, animalStore, negativeKeywordStore, selectedDataStore } from "./stores";
+  import {
+    labelStore,
+    animalStore,
+    negativeKeywordStore,
+    selectedDataStore,
+  } from "./stores";
   import AutoComplete from "simple-svelte-autocomplete";
   import * as api from "./Api";
 
@@ -14,12 +19,12 @@
   let allLabels: string[];
   let allAnimals: string[];
   let allNegKeywords: string[];
-  let allSelectedData: {[key: string]: boolean; };
+  let allSelectedData: { [key: string]: boolean };
   let selectedDescription: string;
   let selectedNegKeyword: string;
   let selectedAnimal: string;
   let isSelected: boolean = true;
-  $: hitLabels = hit.labels
+  $: hitLabels = hit.labels_types_dict;
 
   // tableau10 colors
   const colors = [
@@ -53,150 +58,91 @@
 
   function togggleSelected() {
     isSelected = !isSelected;
-    allSelectedData[hit.image_path] = isSelected
+    allSelectedData[hit.image_path] = isSelected;
     selectedDataStore.update((allSelectedData) => {
-      return allSelectedData
+      return allSelectedData;
     });
   }
 
-  function addLabel(newLabel: string) {
+  function addLabelExclusive(newLabel: string, type: keyof Hit) {
     if (!newLabel || newLabel === "") {
       return;
     }
-    let hitLabels = hit.labels;
-    let hitRelevants = hit.relevant;
-    if (hitRelevants && hitRelevants.length > 0 && hitLabels) {
-      if (hitRelevants.includes(newLabel)) {
+    let hitLabels = hit.labels_types_dict;
+    let hitKey = hit[type];
+    hitLabels
+    if (typeof hitKey === 'string') {
+      if (hitKey === newLabel) {
         return;
       }
       if (
-        newLabel === "animal origin" &&
-        hitRelevants.includes("not animal origin")
-      ) {
-        api.removeLabel(hit.image_path, "not animal origin", "relevant");
-        hitLabels = hitLabels.filter((l) => l !== "not animal origin");
-        hitRelevants = "animal origin";
-      } else if (
-        newLabel === "not animal origin" &&
-        hitLabels.includes("animal origin")
-      ) {
-        api.removeLabel(hit.image_path, "animal origin", "relevant");
-        hitLabels = hitLabels.filter((l) => l !== "animal origin");
-        hitRelevants = "not animal origin";
+        hitKey !== newLabel
+      ){
+        api.removeLabel(hit.image_path, hitKey, `${type}`);
+        delete hitLabels[hitKey];
       }
-      hitLabels = [...new Set([...hitLabels, newLabel])];
-      hitRelevants = newLabel;
-    } else {
-      hitLabels = [...new Set([...hitLabels, newLabel])];
-      hitRelevants = newLabel;
     }
-    hit.labels = hitLabels;
-    hit.relevant = hitRelevants;
+    hitLabels[newLabel] = `${type}`;
+    hitKey = newLabel;
+    hit.labels_types_dict = hitLabels;
+    hit[type] = hitKey;
     try {
-      api.addLabel(hit.image_path, newLabel, "relevant");
+      api.addLabel(hit.image_path, newLabel, `${type}`);
     } catch (e) {
       console.log(e);
     }
   }
 
-  function addDescription(newDescription: string) {
-    if (!newDescription || newDescription === "") {
+  function addLabelInclusive(newLabel: string, type: keyof Hit) {
+    if (!newLabel || newLabel === "") {
       return;
     }
-    let hitDescription = hit.description;
-    let hitLabels = hit.labels;
-    if (hitDescription && hitDescription.length > 0) {
-      if (hitDescription.includes(newDescription)) {
+    let hitKey = hit[type];
+    let hitLabels = hit.labels_types_dict;
+    console.log(hitKey)
+    if ((Array.isArray(hitKey)) && hitKey.length > 0) {
+      if (hitKey.includes(newLabel)) {
         return;
       } else {
-        hitDescription = [...new Set([...hitDescription, newDescription])];
-        hitLabels = [...new Set([...hitLabels, newDescription])];
+        hitKey = [...new Set([...hitKey, newLabel])];
       }
     } else {
-      hitDescription = [newDescription];
-      hitLabels = [...new Set([...hitLabels, newDescription])];
+      hitKey = [newLabel];
     }
-    hit.description = hitDescription;
-    hit.labels = hitLabels;
+    hitLabels[newLabel] = `${type}`;
+    hit[type] = hitKey;
+    hit.labels_types_dict = hitLabels;
     try {
-      api.addLabel(hit.image_path, newDescription, "description");
+      api.addLabel(hit.image_path, newLabel, `${type}`);
     } catch (e) {
       console.log(e);
     }
   }
 
-  function addAnimal(newAnimal: string) {
-    if (!newAnimal || newAnimal === "") {
-      return;
-    }
-    let hitLabels = hit.labels;
-    let hitAnimal = hit.animal;
-    if (hitAnimal && hitAnimal !== newAnimal) {
-      api.removeLabel(hit.image_path, hitAnimal, "animal");
-    }
-
-    if (hitLabels && hitLabels.length > 0) {
-      if (hitAnimal && hitLabels.includes(hitAnimal)) {
-        hitLabels = hitLabels.filter((l) => l !== hitAnimal);
-        hitLabels = [...new Set([...hitLabels, newAnimal])];
-      } else {
-        hitLabels = [...new Set([...hitLabels, newAnimal])];
-      }
-    } else {
-      hit.labels = [newAnimal];
-      hitLabels = hit.labels;
-    }
-    hit.labels = hitLabels;
-    hitAnimal = newAnimal;
-    hit.animal = hitAnimal;
-
-    try {
-      api.addLabel(hit.image_path, newAnimal, "animal");
-    } catch (e) {
-      console.log(e);
-    }
-  }
-
-  function addKeyword(newKeyword: string) {
-    console.log("add", newKeyword);
-    if (!newKeyword || newKeyword === "") {
-      return;
-    }
-    let hitNegKeywords = hit.keywords;
-    let hitLabels = hit.labels;
-    if (hitNegKeywords && hitNegKeywords.length > 0) {
-      if (hitNegKeywords.includes(newKeyword)) {
-        api.removeLabel(hit.image_path, newKeyword, "keywords");
-        if (
-          hitLabels &&
-          hitLabels.length > 0 &&
-          hitLabels.includes(newKeyword)
-        ) {
-          hitLabels = hitLabels.filter((l) => l !== newKeyword);
-        }
-      } else {
-        hitNegKeywords = [...new Set([...hitNegKeywords, newKeyword])];
-        hitLabels = [...new Set([...hitLabels, newKeyword])];
-      }
-    } else {
-      hitNegKeywords = [newKeyword];
-      hitLabels = [...new Set([...hitLabels, newKeyword])];
-    }
-    hit.keywords = hitNegKeywords;
-    hit.labels = hitLabels;
-    try {
-      api.addLabel(hit.image_path, newKeyword, "keywords");
-    } catch (e) {
-      console.log(e);
-    }
-  }
-
-  function onChangeDescription(newLabel: string) {
+  function onChangelabelKeyword(newLabel: string) {
     if (newLabel) {
-      console.log("onChangeDescription", newLabel);
-      addDescription(newLabel);
+      console.log("onChangeLabel", newLabel);
+      addLabelInclusive(newLabel, "keywords");
     } else {
-      console.log("undefined Description: ", newLabel);
+      console.log("undefined Keyword: ", newLabel);
+    }
+  }
+
+  function onChangelabelDescription(newLabel: string) {
+    if (newLabel) {
+      console.log("onChangeLabel", newLabel);
+      addLabelInclusive(newLabel, "description");
+    } else {
+      console.log("undefined Keyword: ", newLabel);
+    }
+  }
+
+  function onChangeLabelAnimal(newAnimal: string, type: string) {
+    if (newAnimal) {
+      console.log("onChangeAnimal", newAnimal);
+      addLabelExclusive(newAnimal, "animal");
+    } else {
+      console.log("undefined label: ", newAnimal);
     }
   }
 
@@ -207,15 +153,6 @@
     return newLabel; // return the new label to the autocomplete
   }
 
-  function onChangeKeyword(newKeyword: string) {
-    if (newKeyword) {
-      console.log("onChangeKeyword", newKeyword);
-      addKeyword(newKeyword);
-    } else {
-      console.log("undefined Keyword: ", newKeyword);
-    }
-  }
-
   function handleCreateKeyword(newKeyword: string) {
     negativeKeywordStore.update((storeNegKeyword) => {
       return [...new Set([...storeNegKeyword, newKeyword])];
@@ -223,27 +160,21 @@
     return newKeyword; // return the new label to the autocomplete
   }
 
-  function onChangeAnimal(newAnimal: string) {
-    if (newAnimal) {
-      console.log("onChangeAnimal", newAnimal);
-      addAnimal(newAnimal);
-    } else {
-      console.log("undefined label: ", newAnimal);
-    }
-  }
-
   function removeLabels(label: string) {
-    console.log(hit)
-    let hitLabels = hit.labels;
-    let hittypes = hit.labels_types_dict;
-    if (hittypes && hittypes[label]) {
-      api.removeLabel(hit.image_path, label, hittypes[label]);
-      hittypes = hit.labels_types_dict;
+    let hitLabels = hit.labels_types_dict;
+    let type =  hitLabels[label] as keyof Hit;
+    console.log(hitLabels, type);
+    if (hitLabels && hitLabels[label]) {
+      api.removeLabel(hit.image_path, label, `${type}`);
+      delete hitLabels[label];
+      hit.labels_types_dict = hitLabels;
+      if (typeof hit[type] === 'string'){
+        hit[type] = undefined
+      }else if (Array.isArray(hit[type])){
+        hit[type] = hit[type].filter((l) => l !== label);
+      }
     }
-    if (hitLabels && hitLabels.includes(label)) {
-      hitLabels = hitLabels.filter((l) => l !== label);
-      hit.labels = hitLabels;
-    }
+    console.log("end: ", hitLabels);
   }
 </script>
 
@@ -254,7 +185,10 @@
     class="card-img-top"
   />
   <div class="box-container">
-    <div class="d-flex flex-row-reverse btn-group btn-group-toggle btn-group-sm" data-toggle="buttons">
+    <div
+      class="d-flex flex-row-reverse btn-group btn-group-toggle btn-group-sm"
+      data-toggle="buttons"
+    >
       <label class="btn btn-sm btn-outline-primary" style="font-size: 0.7em">
         <input
           class="form-check-input"
@@ -275,13 +209,13 @@
         <div class="btn-group me-2" role="group" aria-label="">
           <button
             class="btn btn-sm btn-success"
-            on:click={() => addLabel("animal origin")}
+            on:click={() => addLabelExclusive("animal origin", "relevant")}
           >
             <i class="fa fa-thumbs-up" aria-hidden="true" />
           </button>
           <button
             class="btn btn-sm btn-warning"
-            on:click={() => addLabel("not animal origin")}
+            on:click={() => addLabelExclusive("not animal origin", "relevant")}
           >
             <i class="fa fa-thumbs-down" aria-hidden="true" />
           </button>
@@ -293,7 +227,7 @@
             items={allAnimals}
             bind:selectedItem={selectedAnimal}
             create={false}
-            onChange={onChangeAnimal}
+            onChange={onChangeLabelAnimal}
             placeholder="Animal"
           />
         </div>
@@ -306,7 +240,7 @@
               bind:selectedItem={selectedDescription}
               create={true}
               onCreate={handleCreateDescription}
-              onChange={onChangeDescription}
+              onChange={onChangelabelDescription}
               placeholder="Description"
             />
           </div>
@@ -319,15 +253,15 @@
               items={allNegKeywords}
               bind:selectedItem={selectedNegKeyword}
               create={true}
-              onChange={onChangeKeyword}
+              onChange={onChangelabelKeyword}
               onCreate={handleCreateKeyword}
               placeholder="Negative Keyword"
             />
           </div>
         </div>
-        {#if hitLabels && hitLabels.length > 0}
+        {#if hitLabels && Object.keys(hitLabels).length > 0}
           <div class="btn-toolbar">
-            {#each hitLabels as label, idx}
+            {#each Object.entries(hitLabels) as [label, value], idx}
               <span
                 class="badge rounded-pill bg-secondary me-1 mt-2 position-relative"
               >
@@ -347,8 +281,10 @@
         {/if}
         <div class="d-flex justify-content-between">
           <div class="btn-group">
-
-            <button class="btn btn-sm btn-info me-1" on:click={() => (showModal = true)}>
+            <button
+              class="btn btn-sm btn-info me-1"
+              on:click={() => (showModal = true)}
+            >
               <i class="fa fa-info-circle me-1" aria-hidden="true" />
               Metadata
             </button>

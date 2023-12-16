@@ -9,13 +9,12 @@ export interface Hit {
     _distance: number;
     image_path: string;
     title: string;
-    relevant: string;
-    labels?: string[];
+    metadata?: string;
+    labels_types_dict: {[key: string]: string; };
+    relevant?: string;
     animal?: string;
     description?: string[];
     keywords?: string[];
-    metadata?: string;
-    labels_types_dict?: {[key: string]: string; };
 }
 
 

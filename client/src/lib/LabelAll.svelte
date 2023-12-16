@@ -1,7 +1,5 @@
 <script lang="ts">
-  import Modal from "./Modal.svelte";
   import type { Hit } from "./Api";
-  import { navigate } from "svelte-routing";
   import {
     labelStore,
     animalStore,
@@ -20,22 +18,7 @@
   let selectedNegKeyword: string;
   let selectedAnimal: string;
   let allSelectedData: { [key: string]: boolean };
-  $: hitLabels = [];
-  $: animal = "";
-
-  // tableau10 colors
-  const colors = [
-    "#1f77b4",
-    "#ff7f0e",
-    "#2ca02c",
-    "#d62728",
-    "#9467bd",
-    "#8c564b",
-    "#e377c2",
-    "#7f7f7f",
-    "#bcbd22",
-    "#17becf",
-  ];
+  let hitLabelsall = {};
 
   labelStore.subscribe((storeLabels) => {
     allLabels = storeLabels;
@@ -53,153 +36,75 @@
     allSelectedData = storeSelectedData;
   });
 
-  function addLabel(newLabel: string) {
+  function addLabelExclusive(newLabel: string, type: keyof Hit) {
     if (!newLabel || newLabel === "") {
       return;
     }
-    if (newLabel === "not animal origin"){
-      hitLabels = hitLabels.filter((l) => l !== "animal origin");
-      hitLabels = [...new Set([...hitLabels, newLabel])];
-    } else {
-      hitLabels = hitLabels.filter((l) => l !== "not animal origin");
-      hitLabels = [...new Set([...hitLabels, newLabel])];
+    console.log(hitLabelsall)
+    if (
+      hitLabelsall &&
+      Object.keys(hitLabelsall).length !== 0
+    ) {
+      const labelKey = Object.keys(hitLabelsall).find((key) => hitLabelsall[key] === type);
+      if (labelKey && labelKey !== newLabel) {
+        delete hitLabelsall[labelKey];
+      }
     }
-
+    hitLabelsall[newLabel] = `${type}`;
+    // Send label for all hits marked
     for (let hit of allHits) {
       if (allSelectedData[hit.image_path] === true) {
-        let hitRelevants = hit.relevant;
-        if (hitRelevants && hitRelevants.length > 0) {
-          if (hitRelevants === newLabel) {
-            return;
+        let hitLabels = hit.labels_types_dict;
+        let hitKey = hit[type]; // label from table type
+        if (typeof hitKey === 'string') {
+          if (hitKey === newLabel) {
+            return; // label already applied
           }
           if (
-            newLabel === "animal origin" &&
-            hitRelevants === "not animal origin"
-          ) {
-            api.removeLabel(hit.image_path, "not animal origin", "relevant");
-            hitRelevants = "animal origin";
-          } else if (
-            newLabel === "not animal origin" &&
-            hitRelevants === "animal origin"
-          ) {
-            api.removeLabel(hit.image_path, "animal origin", "relevant");
-            hitRelevants = "not animal origin";
+            hitKey !== newLabel
+          ){
+            api.removeLabel(hit.image_path, hitKey, `${type}`);
+            delete hitLabels[hitKey];
           }
-        } else {
-          hitRelevants = newLabel;
         }
-        hit.relevant = hitRelevants;
+        hitLabels[newLabel] = `${type}`;
+        hitKey = newLabel;
+        hit.labels_types_dict = hitLabels;
+        hit[type] = hitKey;
         try {
-          api.addLabel(hit.image_path, newLabel, "relevant");
+          api.addLabel(hit.image_path, newLabel, `${type}`);
         } catch (e) {
           console.log(e);
         }
       }
     }
+    console.log(hitLabelsall)
   }
 
-  function addDescription(newDescription: string) {
-    if (!newDescription || newDescription === "") {
+  function addLabelInclusive(newLabel: string, type: keyof Hit) {
+    if (!newLabel || newLabel === "") {
       return;
     }
-    hitLabels = [...new Set([...hitLabels, newDescription])];
+    hitLabelsall[newLabel] =  `${type}`;
+    // add label for each hit on page
     for (let hit of allHits) {
       if (allSelectedData[hit.image_path] === true) {
-        let hitDescription = hit.description;
-        if (hitDescription && hitDescription.length > 0) {
-          if (hitDescription.includes(newDescription)) {
+        let hitKey = hit[type];
+        let hitLabels = hit.labels_types_dict;
+        if ((Array.isArray(hitKey)) && hitKey.length > 0) {
+          if (hitKey.includes(newLabel)) {
             return;
           } else {
-            hitDescription = [...new Set([...hitDescription, newDescription])];
+            hitKey = [...new Set([...hitKey, newLabel])];
           }
         } else {
-          hitDescription = [newDescription];
+          hitKey = [newLabel];
         }
-        hit.description = hitDescription;
-        hit.labels = hitLabels;
+        hitLabels[newLabel] = `${type}`;
+        hit[type] = hitKey; // TODO: future remove all from HIT and use only the dict
+        hit.labels_types_dict = hitLabels;
         try {
-          api.addLabel(hit.image_path, newDescription, "description");
-        } catch (e) {
-          console.log(e);
-        }
-      }
-    }
-  }
-
-  function addAnimal(newAnimal: string) {
-    if (!newAnimal || newAnimal === "") {
-      return;
-    }
-    if (hitLabels.length > 0 && !(hitLabels.includes(newAnimal))){
-      if (animal !== ""){
-        hitLabels = hitLabels.filter((l) => l !== animal);
-      }
-      animal = newAnimal
-    }
-    hitLabels = [...new Set([...hitLabels, newAnimal])];
-
-    for (let hit of allHits) {
-      if (allSelectedData[hit.image_path] === true) {
-        let hitLabels = hit.labels;
-        let hitAnimal = hit.animal;
-        if (hitAnimal && hitAnimal !== newAnimal) {
-          api.removeLabel(hit.image_path, hitAnimal, "animal");
-        }
-        if (hitLabels && hitLabels.length > 0) {
-          if (hitAnimal && hitLabels.includes(hitAnimal)) {
-            hitLabels = hitLabels.filter((l) => l !== hitAnimal);
-            hitLabels = [...new Set([...hitLabels, newAnimal])];
-          } else {
-            hitLabels = [...new Set([...hitLabels, newAnimal])];
-          }
-        } else {
-          hit.labels = [newAnimal];
-          hitLabels = hit.labels;
-        }
-        hit.labels = hitLabels;
-        hitAnimal = newAnimal;
-        hit.animal = hitAnimal;
-
-        try {
-          api.addLabel(hit.image_path, newAnimal, "animal");
-        } catch (e) {
-          console.log(e);
-        }
-      }
-    }
-  }
-
-  function addKeyword(newKeyword: string) {
-    if (!newKeyword || newKeyword === "") {
-      return;
-    }
-    hitLabels = [...new Set([...hitLabels, newKeyword])];
-    for (let hit of allHits) {
-      if (allSelectedData[hit.image_path] === true) {
-        let hitNegKeywords = hit.keywords;
-        let hitLabels = hit.labels;
-        if (hitNegKeywords && hitNegKeywords.length > 0) {
-          if (hitNegKeywords.includes(newKeyword)) {
-            api.removeLabel(hit.image_path, newKeyword, "keywords");
-            if (
-              hitLabels &&
-              hitLabels.length > 0 &&
-              hitLabels.includes(newKeyword)
-            ) {
-              hitLabels = hitLabels.filter((l) => l !== newKeyword);
-            }
-          } else {
-            hitNegKeywords = [...new Set([...hitNegKeywords, newKeyword])];
-            hitLabels = [...new Set([...hitLabels, newKeyword])];
-          }
-        } else {
-          hitNegKeywords = [newKeyword];
-          hitLabels = [...new Set([...hitLabels, newKeyword])];
-        }
-        hit.keywords = hitNegKeywords;
-        hit.labels = hitLabels;
-        try {
-          api.addLabel(hit.image_path, newKeyword, "keywords");
+          api.addLabel(hit.image_path, newLabel, `${type}`);
         } catch (e) {
           console.log(e);
         }
@@ -210,7 +115,7 @@
   function onChangeDescription(newLabel: string) {
     if (newLabel) {
       console.log("onChangeDescription", newLabel);
-      addDescription(newLabel);
+      addLabelInclusive(newLabel, "description");
     } else {
       console.log("undefined Description: ", newLabel);
     }
@@ -226,7 +131,7 @@
   function onChangeKeyword(newKeyword: string) {
     if (newKeyword) {
       console.log("onChangeKeyword", newKeyword);
-      addKeyword(newKeyword);
+      addLabelInclusive(newKeyword, "keywords");
     } else {
       console.log("undefined Keyword: ", newKeyword);
     }
@@ -236,35 +141,41 @@
     negativeKeywordStore.update((storeNegKeyword) => {
       return [...new Set([...storeNegKeyword, newKeyword])];
     });
-    return newKeyword; // return the new label to the autocomplete
+    return newKeyword;
   }
 
   function onChangeAnimal(newAnimal: string) {
+    console.log("change", hitLabelsall, newAnimal);
     if (newAnimal) {
       console.log("onChangeAnimal", newAnimal);
-      addAnimal(newAnimal);
+      addLabelExclusive(newAnimal, "animal");
     } else {
       console.log("undefined label: ", newAnimal);
     }
   }
 
   function removeLabels(label: string) {
+    delete hitLabelsall[label];
+    hitLabelsall = hitLabelsall;
     for (let hit of allHits) {
-      console.log(hit)
       if (allSelectedData[hit.image_path] === true) {
-        // let hitLabels = hit.labels;
-        let hittypes = hit.labels_types_dict;
-        if (hittypes && hittypes[label]) {
-          console.log(hittypes)
-          api.removeLabel(hit.image_path, label, hittypes[label]);
-          hittypes = hit.labels_types_dict;
+        let hitLabels = hit.labels_types_dict;
+        let type =  hitLabels[label] as keyof Hit;
+        if (hitLabels && hitLabels[label]) {
+          api.removeLabel(hit.image_path, label, `${type}`);
+          delete hitLabels[label];
+          hitLabels = hitLabels;
+          hit.labels_types_dict = hitLabels;
+          if (typeof hit[type] === 'string'){
+            hit[type] = undefined
+          }else if (Array.isArray(hit[type])){
+            hit[type] = hit[type].filter((l) => l !== label);
+          }
         }
       }
     }
-    if (hitLabels && hitLabels.includes(label)) {
-      hitLabels = hitLabels.filter((l) => l !== label);
-    }
   }
+
 </script>
 
 <div class="card me-3 mb-3">
@@ -275,13 +186,13 @@
         <div class="btn-group me-2" role="group" aria-label="">
           <button
             class="btn btn-sm btn-success"
-            on:click={() => addLabel("animal origin")}
+            on:click={() => addLabelExclusive("animal origin", "relevant")}
           >
             <i class="fa fa-thumbs-up" aria-hidden="true" />
           </button>
           <button
             class="btn btn-sm btn-warning"
-            on:click={() => addLabel("not animal origin")}
+            on:click={() => addLabelExclusive("not animal origin", "relevant")}
           >
             <i class="fa fa-thumbs-down" aria-hidden="true" />
           </button>
@@ -328,9 +239,9 @@
       </div>
     </div>
   </div>
-  {#if hitLabels && hitLabels.length > 0}
+  {#if hitLabelsall && Object.keys(hitLabelsall).length > 0}
     <div class="btn-toolbar">
-      {#each hitLabels as label, idx}
+      {#each Object.entries(hitLabelsall) as [label, value], idx}
         <span
           class="badge rounded-pill bg-secondary me-1 mt-2 position-relative"
         >
