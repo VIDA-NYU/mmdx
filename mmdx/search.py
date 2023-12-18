@@ -209,6 +209,43 @@ class VectorDB:
         df_join.drop(columns=["types"], inplace=True)
         return df_join
 
+    def search_labeled_data(self, limit):
+        image_path = set(self.labelsdb.get_image_paths())
+        lance_tbl = self.tbl.to_lance()
+        print(image_path)
+        image_path_condition = ", ".join([f"'{path}'" for path in image_path])
+
+        df_hits = duckdb.sql(
+            f"""
+            SELECT lance_tbl.*, grouped_labels.labels, grouped_labels.types
+            FROM lance_tbl
+            LEFT OUTER JOIN (
+                SELECT image_path,
+                       list(label) AS labels,
+                       list(type) AS types
+                FROM (
+                    SELECT image_path, label, 'description' AS type FROM sqlite_scan('{self.labelsdb_path}', 'description')
+                    UNION ALL
+                    SELECT image_path, label, 'relevant' AS type FROM sqlite_scan('{self.labelsdb_path}', 'relevant')
+                    UNION ALL
+                    SELECT image_path, label, 'animal' AS type FROM sqlite_scan('{self.labelsdb_path}', 'animal')
+                    UNION ALL
+                    SELECT image_path, label, 'keywords' AS type FROM sqlite_scan('{self.labelsdb_path}', 'keywords')
+                ) GROUP BY image_path
+            ) AS grouped_labels
+            ON (lance_tbl.image_path = grouped_labels.image_path)
+            WHERE lance_tbl.image_path IN ({image_path_condition})
+        """
+        ).to_df()
+        df_hits["labels"] = df_hits["labels"].fillna("").apply(list)
+        df_hits["title"] = df_hits["title"].fillna("")
+        df_hits["types"] = df_hits["types"].fillna("").apply(list)
+        df_hits["labels_types_dict"] = df_hits.apply(lambda row: {label: type for label, type in zip(row["labels"], row["types"])}, axis=1)
+        df_hits.drop(columns=["vector", "types"], inplace=True)
+        print(df_hits["labels_types_dict"])
+        return df_hits
+
+
     def create_zip_labeled_binary_data(
             self,
             output_dir: str,

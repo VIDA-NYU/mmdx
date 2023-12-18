@@ -54,6 +54,15 @@ export async function random(limit: number): Promise<Hits> {
     return response;
 }
 
+export async function labeled(): Promise<Hits> {
+    const response = await fetchJSON<Hits>("/labeled", {
+    }).catch((e) => {
+        console.error(e);
+        throw new Error("Failed to retrieve labeled search results.", { cause: e })
+    });
+    return response;
+}
+
 interface LabelsResponse {
     labels: string[];
 }

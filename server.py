@@ -79,6 +79,12 @@ def image_search():
     return {"total": len(hits.index), "hits": hits.to_dict("records")}
 
 
+@app.route("/api/v1/labeled")
+def labeled_search():
+    limit: int = request.args.get("limit", 12, type=int)
+    hits = db.search_labeled_data(limit=limit)
+    return {"total": len(hits.index), "hits": hits.to_dict("records")}
+
 @app.route("/api/v1/add_label")
 def add_label():
     image_path: str = request.args.get("image_path", None, type=str)

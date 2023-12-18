@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { onMount } from "svelte";
   import type { Hits } from "./Api";
   import { random } from "./Api";
   import ImageCard from "./ImageCard.svelte";
@@ -30,6 +29,7 @@
     console.log("onChangeLabels");
     result = result;
   }
+
 </script>
 
 <div class="container">
