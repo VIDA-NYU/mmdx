@@ -1,27 +1,33 @@
 <script lang="ts">
   import type { Hit } from "./Api";
   import {
-    labelStore,
+    descriptionsStore,
     animalStore,
     negativeKeywordStore,
     selectedDataStore,
   } from "./stores";
   import AutoComplete from "simple-svelte-autocomplete";
   import * as api from "./Api";
+  import { createEventDispatcher } from 'svelte';
+
+	const dispatch = createEventDispatcher();
 
   export let allHits: Hit[];
 
-  let allLabels: string[];
+  let allDescriptions: string[];
   let allAnimals: string[];
   let allNegKeywords: string[];
-  let selectedDescription: string;
-  let selectedNegKeyword: string;
-  let selectedAnimal: string;
-  let allSelectedData: { [key: string]: boolean };
-  let hitLabelsall = {};
 
-  labelStore.subscribe((storeLabels) => {
-    allLabels = storeLabels;
+  let selectedDescription: string;
+  let selectedAnimal: string;
+  let selectedNegKeyword: string;
+
+  let allSelectedData: { [key: string]: boolean };
+
+  let labels = {};
+
+  descriptionsStore.subscribe((storeLabels) => {
+    allDescriptions = storeLabels;
   });
 
   animalStore.subscribe((storeAnimals) => {
@@ -36,105 +42,89 @@
     allSelectedData = storeSelectedData;
   });
 
-  function addLabelExclusive(newLabel: string, type: keyof Hit) {
+  function addLabelExclusive(newLabel: string, type: api.LabelType) {
     if (!newLabel || newLabel === "") {
       return;
     }
-    console.log(hitLabelsall)
+    console.log(labels);
+
     if (
-      hitLabelsall &&
-      Object.keys(hitLabelsall).length !== 0
+      labels &&
+      Object.keys(labels).length !== 0
     ) {
-      const labelKey = Object.keys(hitLabelsall).find((key) => hitLabelsall[key] === type);
+      const labelKey = Object.keys(labels).find((key) => labels[key] === type);
       if (labelKey && labelKey !== newLabel) {
-        delete hitLabelsall[labelKey];
+        delete labels[labelKey];
       }
     }
-    hitLabelsall[newLabel] = `${type}`;
+    labels[newLabel] = `${type}`;
+
+    const selectedHits = allHits.filter(hit => allSelectedData[hit.image_path] === true);
+
     // Send label for all hits marked
-    for (let hit of allHits) {
-      if (allSelectedData[hit.image_path] === true) {
-        let hitLabels = hit.labels_types_dict;
-        let hitKey = hit[type]; // label from table type
-        if (typeof hitKey === 'string') {
-          if (hitKey === newLabel) {
-            return; // label already applied
-          }
-          if (
-            hitKey !== newLabel
-          ){
-            api.removeLabel(hit.image_path, hitKey, `${type}`);
-            delete hitLabels[hitKey];
-          }
-        }
-        hitLabels[newLabel] = `${type}`;
-        hitKey = newLabel;
-        hit.labels_types_dict = hitLabels;
-        hit[type] = hitKey;
-        try {
-          api.addLabel(hit.image_path, newLabel, `${type}`);
-        } catch (e) {
-          console.log(e);
+    for (let hit of selectedHits) {
+      let hitLabels = hit.labels_types_dict;
+      let hitKey = Object.keys(hitLabels).find((key) => hitLabels[key] === type);
+      if (hitKey) {
+        if (hitKey === newLabel) {
+          // label already applied, skip to next
+          continue;
+        } else {
+          api.removeLabel(hit.image_path, hitKey, `${type}`);
+          delete hit.labels_types_dict[hitKey];
         }
       }
+      hit.labels_types_dict[newLabel] = type;
+      sendToBackend(hit.image_path, newLabel, type);
     }
-    console.log(hitLabelsall)
+    dispatch('changeLabels', {
+			newLabel, type
+		});
+    console.log(labels)
   }
 
-  function addLabelInclusive(newLabel: string, type: keyof Hit) {
+  function addLabelInclusive(newLabel: string, type: api.LabelType) {
+    console.log("addLabelInclusive", newLabel, type);
     if (!newLabel || newLabel === "") {
       return;
     }
-    hitLabelsall[newLabel] =  `${type}`;
+    labels[newLabel] = `${type}`;
+
     // add label for each hit on page
-    for (let hit of allHits) {
-      if (allSelectedData[hit.image_path] === true) {
-        let hitKey = hit[type];
-        let hitLabels = hit.labels_types_dict;
-        if ((Array.isArray(hitKey)) && hitKey.length > 0) {
-          if (hitKey.includes(newLabel)) {
-            return;
-          } else {
-            hitKey = [...new Set([...hitKey, newLabel])];
-          }
-        } else {
-          hitKey = [newLabel];
-        }
-        hitLabels[newLabel] = `${type}`;
-        hit[type] = hitKey; // TODO: future remove all from HIT and use only the dict
-        hit.labels_types_dict = hitLabels;
-        try {
-          api.addLabel(hit.image_path, newLabel, `${type}`);
-        } catch (e) {
-          console.log(e);
-        }
-      }
+    const selectedHits = allHits.filter(hit => allSelectedData[hit.image_path] === true);
+    for (let hit of selectedHits) {
+      let hitLabels = hit.labels_types_dict;
+      hitLabels[newLabel] = `${type}`;
+      hit.labels_types_dict = hitLabels;
+      sendToBackend(hit.image_path, newLabel, type);
+    }
+    dispatch('changeLabels', {
+			newLabel, type
+		});
+  }
+
+  function sendToBackend(image_path: string, label: string, type: api.LabelType) {
+    console.log('Send to backend: ', image_path, label, type);
+    try {
+      api.addLabel(image_path, label, type); // FIXME
+    } catch (e) {
+      console.log(e);
     }
   }
 
   function onChangeDescription(newLabel: string) {
-    if (newLabel) {
-      console.log("onChangeDescription", newLabel);
-      addLabelInclusive(newLabel, "description");
-    } else {
-      console.log("undefined Description: ", newLabel);
-    }
-  }
-
-  function handleCreateDescription(newLabel: string) {
-    labelStore.update((storeLabels) => {
-      return [...new Set([...storeLabels, newLabel])];
-    });
-    return newLabel; // return the new label to the autocomplete
+    addLabelInclusive(newLabel, "description");
   }
 
   function onChangeKeyword(newKeyword: string) {
-    if (newKeyword) {
-      console.log("onChangeKeyword", newKeyword);
-      addLabelInclusive(newKeyword, "keywords");
-    } else {
-      console.log("undefined Keyword: ", newKeyword);
-    }
+    addLabelInclusive(newKeyword, "keywords");
+  }
+
+  function handleCreateDescription(newLabel: string) {
+    descriptionsStore.update((storeLabels) => {
+      return [...new Set([...storeLabels, newLabel])];
+    });
+    return newLabel; // return the new label to the autocomplete
   }
 
   function handleCreateKeyword(newKeyword: string) {
@@ -145,7 +135,7 @@
   }
 
   function onChangeAnimal(newAnimal: string) {
-    console.log("change", hitLabelsall, newAnimal);
+    console.log("change", labels, newAnimal);
     if (newAnimal) {
       console.log("onChangeAnimal", newAnimal);
       addLabelExclusive(newAnimal, "animal");
@@ -155,25 +145,24 @@
   }
 
   function removeLabels(label: string) {
-    delete hitLabelsall[label];
-    hitLabelsall = hitLabelsall;
-    for (let hit of allHits) {
+    delete labels[label];
+    labels = labels; // required to update component
+
+    const selectedHits = allHits.filter(hit => allSelectedData[hit.image_path] === true);
+    for (let hit of selectedHits) {
       if (allSelectedData[hit.image_path] === true) {
-        let hitLabels = hit.labels_types_dict;
-        let type =  hitLabels[label] as keyof Hit;
+
+        const hitLabels = hit.labels_types_dict;
         if (hitLabels && hitLabels[label]) {
-          api.removeLabel(hit.image_path, label, `${type}`);
+          api.removeLabel(hit.image_path, label, hitLabels[label]);
           delete hitLabels[label];
-          hitLabels = hitLabels;
-          hit.labels_types_dict = hitLabels;
-          if (typeof hit[type] === 'string'){
-            hit[type] = undefined
-          }else if (Array.isArray(hit[type])){
-            hit[type] = hit[type].filter((l) => l !== label);
-          }
         }
       }
     }
+
+    dispatch('changeLabels', {
+			label // TODO: type?
+		});
   }
 
 </script>
@@ -213,7 +202,7 @@
             <AutoComplete
               debug={false}
               inputClassName="form-control"
-              items={allLabels}
+              items={allDescriptions}
               bind:selectedItem={selectedDescription}
               create={true}
               onCreate={handleCreateDescription}
@@ -237,28 +226,28 @@
           </div>
         </div>
       </div>
+      {#if labels && Object.keys(labels).length > 0}
+        <div class="btn-toolbar">
+          {#each Object.entries(labels) as [label, value], idx}
+            <span
+              class="badge rounded-pill bg-secondary me-1 mt-2 position-relative"
+            >
+              <!-- style="background-color: {colors[idx]} !important;" -->
+              {label}
+              <span
+                role="button"
+                on:click={() => removeLabels(label)}
+                class="position-absolute top-0 start-100 translate-middle"
+              >
+                <i class="fa fa-times-circle" aria-hidden="true" />
+                <span class="visually-hidden">Remove label</span>
+              </span>
+            </span>
+          {/each}
+        </div>
+      {/if}
     </div>
   </div>
-  {#if hitLabelsall && Object.keys(hitLabelsall).length > 0}
-    <div class="btn-toolbar">
-      {#each Object.entries(hitLabelsall) as [label, value], idx}
-        <span
-          class="badge rounded-pill bg-secondary me-1 mt-2 position-relative"
-        >
-          <!-- style="background-color: {colors[idx]} !important;" -->
-          {label}
-          <span
-            role="button"
-            on:click={() => removeLabels(label)}
-            class="position-absolute top-0 start-100 translate-middle"
-          >
-            <i class="fa fa-times-circle" aria-hidden="true" />
-            <span class="visually-hidden">Remove label</span>
-          </span>
-        </span>
-      {/each}
-    </div>
-  {/if}
 </div>
 
 <style>

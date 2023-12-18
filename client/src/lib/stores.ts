@@ -1,7 +1,20 @@
 import { writable } from 'svelte/store';
 import { animals, descriptions, negativeKeywords } from "./Descriptions";
 
-export const labelStore = writable<string[]>(descriptions);
+// type LabelType = "relevant" |  " animal";
+
+// interface Label {
+//     name: string;
+//     type: LabelType;
+// }
+
+// const labels: Label[];
+
+// interface LabelList = {
+//     [key: LabelType]: string[];
+// };
+
+export const descriptionsStore = writable<string[]>(descriptions);
 
 export const animalStore = writable<string[]>(animals);
 

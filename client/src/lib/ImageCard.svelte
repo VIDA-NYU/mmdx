@@ -3,7 +3,7 @@
   import type { Hit } from "./Api";
   import { navigate } from "svelte-routing";
   import {
-    labelStore,
+    descriptionsStore,
     animalStore,
     negativeKeywordStore,
     selectedDataStore,
@@ -13,6 +13,7 @@
 
   export let hit: Hit;
   $: parsedHitMetadata = hit.metadata;
+  $: hitLabels = hit.labels_types_dict;
 
   let showModal = false;
 
@@ -24,7 +25,6 @@
   let selectedNegKeyword: string;
   let selectedAnimal: string;
   let isSelected: boolean = true;
-  $: hitLabels = hit.labels_types_dict;
 
   // tableau10 colors
   const colors = [
@@ -40,7 +40,7 @@
     "#17becf",
   ];
 
-  labelStore.subscribe((storeLabels) => {
+  descriptionsStore.subscribe((storeLabels) => {
     allLabels = storeLabels;
   });
 
@@ -58,19 +58,18 @@
 
   function togggleSelected() {
     isSelected = !isSelected;
-    allSelectedData[hit.image_path] = isSelected;
-    selectedDataStore.update((allSelectedData) => {
-      return allSelectedData;
+    selectedDataStore.update((selectedData) => {
+      selectedData[hit.image_path] = isSelected;
+      return selectedData;
     });
   }
 
-  function addLabelExclusive(newLabel: string, type: keyof Hit) {
+  function addLabelExclusive(newLabel: string, type: api.LabelType) {
     if (!newLabel || newLabel === "") {
       return;
     }
     let hitLabels = hit.labels_types_dict;
-    let hitKey = hit[type];
-    hitLabels
+    let hitKey = Object.keys(hitLabels).find((key) => hitLabels[key] === type);
     if (typeof hitKey === 'string') {
       if (hitKey === newLabel) {
         return;
@@ -83,9 +82,7 @@
       }
     }
     hitLabels[newLabel] = `${type}`;
-    hitKey = newLabel;
     hit.labels_types_dict = hitLabels;
-    hit[type] = hitKey;
     try {
       api.addLabel(hit.image_path, newLabel, `${type}`);
     } catch (e) {
@@ -93,24 +90,19 @@
     }
   }
 
-  function addLabelInclusive(newLabel: string, type: keyof Hit) {
+  function addLabelInclusive(newLabel: string, type: api.LabelType) {
     if (!newLabel || newLabel === "") {
       return;
     }
-    let hitKey = hit[type];
     let hitLabels = hit.labels_types_dict;
+    let hitKey = Object.keys(hitLabels).find((key) => hitLabels[key] === type);
     console.log(hitKey)
     if ((Array.isArray(hitKey)) && hitKey.length > 0) {
       if (hitKey.includes(newLabel)) {
         return;
-      } else {
-        hitKey = [...new Set([...hitKey, newLabel])];
       }
-    } else {
-      hitKey = [newLabel];
     }
     hitLabels[newLabel] = `${type}`;
-    hit[type] = hitKey;
     hit.labels_types_dict = hitLabels;
     try {
       api.addLabel(hit.image_path, newLabel, `${type}`);
@@ -119,35 +111,8 @@
     }
   }
 
-  function onChangelabelKeyword(newLabel: string) {
-    if (newLabel) {
-      console.log("onChangeLabel", newLabel);
-      addLabelInclusive(newLabel, "keywords");
-    } else {
-      console.log("undefined Keyword: ", newLabel);
-    }
-  }
-
-  function onChangelabelDescription(newLabel: string) {
-    if (newLabel) {
-      console.log("onChangeLabel", newLabel);
-      addLabelInclusive(newLabel, "description");
-    } else {
-      console.log("undefined Keyword: ", newLabel);
-    }
-  }
-
-  function onChangeLabelAnimal(newAnimal: string, type: string) {
-    if (newAnimal) {
-      console.log("onChangeAnimal", newAnimal);
-      addLabelExclusive(newAnimal, "animal");
-    } else {
-      console.log("undefined label: ", newAnimal);
-    }
-  }
-
   function handleCreateDescription(newLabel: string) {
-    labelStore.update((storeLabels) => {
+    descriptionsStore.update((storeLabels) => {
       return [...new Set([...storeLabels, newLabel])];
     });
     return newLabel; // return the new label to the autocomplete
@@ -162,17 +127,12 @@
 
   function removeLabels(label: string) {
     let hitLabels = hit.labels_types_dict;
-    let type =  hitLabels[label] as keyof Hit;
+    let type =  hitLabels[label] as api.LabelType;
     console.log(hitLabels, type);
     if (hitLabels && hitLabels[label]) {
       api.removeLabel(hit.image_path, label, `${type}`);
       delete hitLabels[label];
       hit.labels_types_dict = hitLabels;
-      if (typeof hit[type] === 'string'){
-        hit[type] = undefined
-      }else if (Array.isArray(hit[type])){
-        hit[type] = hit[type].filter((l) => l !== label);
-      }
     }
     console.log("end: ", hitLabels);
   }
@@ -227,7 +187,7 @@
             items={allAnimals}
             bind:selectedItem={selectedAnimal}
             create={false}
-            onChange={onChangeLabelAnimal}
+            onChange={(label) => addLabelExclusive(label, "animal")}
             placeholder="Animal"
           />
         </div>
@@ -240,7 +200,7 @@
               bind:selectedItem={selectedDescription}
               create={true}
               onCreate={handleCreateDescription}
-              onChange={onChangelabelDescription}
+              onChange={(label) => addLabelInclusive(label, "description")}
               placeholder="Description"
             />
           </div>
@@ -253,17 +213,17 @@
               items={allNegKeywords}
               bind:selectedItem={selectedNegKeyword}
               create={true}
-              onChange={onChangelabelKeyword}
+              onChange={(label) => addLabelInclusive(label, "keywords")}
               onCreate={handleCreateKeyword}
               placeholder="Negative Keyword"
             />
           </div>
         </div>
         {#if hitLabels && Object.keys(hitLabels).length > 0}
-          <div class="btn-toolbar">
+          <div class="btn-toolbar mb-1">
             {#each Object.entries(hitLabels) as [label, value], idx}
               <span
-                class="badge rounded-pill bg-secondary me-1 mt-2 position-relative"
+                class="badge rounded-pill bg-secondary me-1 mt-1 mb-1 position-relative"
               >
                 <!-- style="background-color: {colors[idx]} !important;" -->
                 {label}
