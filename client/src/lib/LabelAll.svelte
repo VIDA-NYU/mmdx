@@ -78,7 +78,6 @@
       sendToBackend(hit.image_path, newLabel, type);
     }
     dispatch('changeLabels', {
-			newLabel, type
 		});
     console.log(labels)
   }
@@ -99,7 +98,6 @@
       sendToBackend(hit.image_path, newLabel, type);
     }
     dispatch('changeLabels', {
-			newLabel, type
 		});
   }
 
@@ -161,7 +159,6 @@
     }
 
     dispatch('changeLabels', {
-			label // TODO: type?
 		});
   }
 

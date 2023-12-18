@@ -33,6 +33,11 @@
     result = null;
   }
 
+  function onLabelAllEvent() {
+    console.log("onChangeLabels");
+    result = result;
+  }
+
 </script>
 
 <div class="container">
@@ -120,7 +125,7 @@
             </div>
           {/each}
           <div class="w-25">
-            <LabelAll allHits={result.hits} />
+            <LabelAll allHits={result.hits} on:changeLabels={onLabelAllEvent} />
           </div>
         </div>
       {/if}

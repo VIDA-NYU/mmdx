@@ -37,6 +37,11 @@
     searchSimilarImages(location.search);
   }
 
+  function onLabelAllEvent() {
+    console.log("onChangeLabels");
+    result = result;
+  }
+
   // location is received as component props
   export let location: Location;
   $: {
@@ -126,7 +131,7 @@
             </div>
           {/each}
           <div class="w-25">
-            <LabelAll allHits={result.hits} />
+            <LabelAll allHits={result.hits} on:changeLabels={onLabelAllEvent} />
           </div>
         </div>
       {/if}
