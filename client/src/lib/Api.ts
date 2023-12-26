@@ -13,10 +13,6 @@ export interface Hit {
     title: string;
     metadata?: string;
     labels_types_dict: {[key: string]: LabelType; };
-    // relevant?: string;
-    // animal?: string;
-    // description?: string[];
-    // keywords?: string[];
 }
 
 
