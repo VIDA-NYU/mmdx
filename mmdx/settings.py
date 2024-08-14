@@ -41,4 +41,6 @@ ENDPOINT: str = os.getenv("ENDPOINT", default=None)
 ENDPOINT_URL: str = os.getenv("ENDPOINT_URL", default=None)
 DEFAULT_CSV_BUCKET: str = "labeling-csv"
 CSV_FILENAME: str = os.getenv("CSV_FILENAME", default=None)
+LOAD_DATA: bool = str(os.getenv("LOAD_DATA")).lower() == "true"
+
 

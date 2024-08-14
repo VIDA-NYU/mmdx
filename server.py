@@ -13,10 +13,10 @@ from mmdx.settings import (
     ENDPOINT_URL,
     SECRET_KEY,
     DATA_SOURCE,
+    LOAD_DATA,
 )
 from mmdx.s3_client import S3Client
 from io import BytesIO
-
 
 app = Flask(__name__)
 
@@ -83,7 +83,8 @@ def image_search():
 def add_label():
     image_path: str = request.args.get("image_path", None, type=str)
     label: str = request.args.get("label", None, type=str)
-    db.add_label(image_path=image_path, label=label)
+    table: str = request.args.get("table", None, type=str)
+    db.add_label(image_path=image_path, label=label, table=table)
     return {"success": True}
 
 
@@ -91,13 +92,15 @@ def add_label():
 def remove_label():
     image_path: str = request.args.get("image_path", None, type=str)
     label: str = request.args.get("label", None, type=str)
-    db.remove_label(image_path=image_path, label=label)
+    table: str = request.args.get("table", None, type=str)
+    db.remove_label(image_path=image_path, label=label, table=table)
     return {"success": True}
 
 
 @app.route("/api/v1/labels")
 def labels():
-    labels = db.get_labels()
+    table: str = request.args.get("table", None, type=str)
+    labels = db.get_labels(table)
     return {"labels": labels}
 
 
@@ -111,12 +114,33 @@ def label_counts():
 @app.route("/api/v1/download/binary_labeled_data")
 def download_binary_labeled_data():
     current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    filename = f"binary_labeled_data_{current_time}.zip"
+    filename = f"labeled_data_{current_time}.zip"
     output_zip_file = db.create_zip_labeled_binary_data(
-        output_dir=os.path.join(DB_PATH, "downloads"), filename=filename
+        output_dir=os.path.join(DB_PATH, "downloads"),
+        filename=filename
     )
     print("Created zip file: ", output_zip_file)
     return send_file(output_zip_file, as_attachment=True)
+
+
+@app.route("/api/v1/load/csv_data", methods=['POST'])
+def create_database():
+    # try:
+    if 'file' not in request.files:
+        return {'error': 'No file part'}
+    file = request.files['file']
+    print(file)
+
+    if file.filename == '':
+        return {'error': 'No selected file'}
+
+    filename = file.filename
+    filepath = os.path.join(filename)
+    file.save(filepath)
+    os.environ['CSV_PATH'] = filepath
+    global db
+    db = create_db_for_data_path(S3_Client)
+    return {'message': 'CSV data received and processed successfully'}
 
 
 def create_db_for_data_path(S3_Client):
@@ -158,8 +182,10 @@ if DATA_SOURCE.upper() == "S3":
 else:
     S3_Client=None
 
-
-db: VectorDB = create_db_for_data_path(S3_Client)
+if LOAD_DATA:
+    db: VectorDB = None
+else:
+    db: VectorDB = create_db_for_data_path(S3_Client)
 
 if __name__ == "__main__":
     if os.environ.get("ENV") == "prod":

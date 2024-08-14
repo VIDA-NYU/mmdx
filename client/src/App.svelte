@@ -1,23 +1,31 @@
 <script lang="ts">
   import { Router, Link, Route } from "svelte-routing";
   import { onMount } from "svelte";
-  import { labelStore } from "./lib/stores";
+  import { labelStore, negativeKeywordStore } from "./lib/stores";
   import * as api from "./lib/Api";
   import BootstrapComponents from "./BootstrapComponents.svelte";
   import Search from "./lib/Search.svelte";
   import Random from "./lib/Random.svelte";
   import ImageSearch from "./lib/ImageSearch.svelte";
   import LabeledData from "./lib/LabeledData.svelte";
+  import CSVLoader from "./lib/CSVLoader.svelte"; // Import the CSV Loader component
 
   export let url = "";
 
   onMount(async () => {
-    console.log("Loading labels...");
-    const remoteLabels = await api.loadLabels();
+    console.log("Loading positive keywords");
+    const remotePositivekeywords = await api.loadLabels("description");
     labelStore.update((labels: string[]) => [
-      ...new Set([...labels, ...remoteLabels.labels]),
+      ...new Set([...labels, ...remotePositivekeywords.labels]),
     ]);
-    console.log("Labels loaded: ", remoteLabels);
+
+    console.log("Loading negative keywords");
+    const remoteNegativekeywords= await api.loadLabels("keywords");
+    negativeKeywordStore.update((labels: string[]) => [
+      ...new Set([...labels, ...remoteNegativekeywords.labels]),
+    ]);
+
+    console.log("Labels loaded");
   });
 
   function getLinkProps(args: Object): Object {
@@ -29,13 +37,14 @@
     const isActive = href === "/" ? isCurrent : isPartiallyCurrent || isCurrent;
     return isActive ? { class: "nav-link active" } : { class: "nav-link" };
   }
+
 </script>
 
 <main>
   <Router {url}>
     <nav class="navbar navbar-expand-lg sticky-top">
       <div class="container-fluid">
-        <Link class="navbar-brand fw-bold" to="/">MMDX</Link>
+        <Link class="navbar-brand fw-bold" to="/csv-loader">MMDX</Link>
         <button
           class="navbar-toggler"
           type="button"
@@ -49,10 +58,9 @@
         </button>
         <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
           <div class="navbar-nav nav-underline">
+            <Link to="/csv-loader" getProps={getLinkProps}>Load CSV File</Link>
             <Link to="/" getProps={getLinkProps}>Keyword Search</Link>
-            <Link to="/search/random" getProps={getLinkProps}
-              >Random Search</Link
-            >
+            <Link to="/search/random" getProps={getLinkProps}>Random Search</Link>
             <Link to="/search/image" getProps={getLinkProps}>Image Search</Link>
             <Link to="/labels" getProps={getLinkProps}>Labels</Link>
             <!-- <Link to="/bootstrap" getProps={getLinkProps}>Bootstrap</Link> -->
@@ -70,6 +78,7 @@
         location={window.location}
       />
       <Route path="/labels" component={LabeledData} />
+      <Route path="/csv-loader" component={CSVLoader} /> <!-- Add the route for CSV Loader -->
       <Route path="/bootstrap" component={BootstrapComponents} />
     </div>
   </Router>
